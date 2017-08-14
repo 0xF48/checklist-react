@@ -1,0 +1,154 @@
+@import './helpers';
+@import './layout';
+
+
+// body,*{
+// 	-webkit-font-smoothing: subpixel-antialiased;
+// }
+
+.-i-slide-btn{
+	cursor: pointer;
+	// float: left;
+	// width: 32px;
+	// height: 32px;
+	
+	&.disabled{
+		pointer-events: none;
+		opacity: 0.3;
+		cursor: default;
+		i{
+			cursor: default;
+		}
+	}
+}
+
+
+
+
+// slide
+.-i-slide-fixed{
+	transform: none !important;
+	flex-shrink:0;
+}
+
+
+.-i-slide-scroll{
+	overflow-x: scroll;
+	overflow-y: hidden;
+}
+
+.-i-slide-scroll.-i-slide-vertical{
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
+
+.-i-slide-center{
+	@include center;
+}
+
+.-i-slide-static{
+	box-sizing: border-box;
+	position: relative;
+	flex-direction: row;
+	display: flex;
+	overflow: hidden;
+	&.-i-slide-reverse{
+		flex-direction: row-reverse;
+	}
+}
+
+.-i-slide-outer{
+	::-webkit-scrollbar {
+		display: none;
+	}
+	position: relative;
+	overflow: hidden;
+}
+
+.-i-slide-inner{
+	min-height: 100%;
+	display: flex;
+	>.-i-slide-in{
+		transition: transform 0.3s cubic-bezier(0, 0.93, 0.27, 1);
+		transform: scale(1) rotateY(0deg) !important;
+	}
+	> .-i-slide-in_pre.-i-slide-right{
+		transform-origin: 0% 50%;
+		transform: scale(1) rotateY(10deg);
+	}
+
+	> .-i-slide-in_pre.-i-slide-left{
+		transform-origin: 100% 50%;
+		transform: scale(1) rotateY(-10deg);
+	}
+	&.-i-slide-reverse{
+		flex-direction: row-reverse;
+	}
+}
+
+.-i-slide-inner > .-i-slide-outer{
+	flex-shrink: 0;
+}
+.-i-slide-inner > .-i-slide-static{
+	flex-shrink: 0;
+}
+
+.-i-slide-horizontal{
+	flex-direction: row;
+}
+
+.-i-slide-vertical{
+	flex-direction: column;
+	> .-i-slide-in_pre.-i-slide-right{
+		transform-origin: 50% 0%;
+		transform: scale(1) rotateX(-60deg);
+	}
+
+	> .-i-slide-in_pre.-i-slide-left{
+		transform-origin: 50% 100%;
+		transform: scale(1) rotateX(60deg);
+	}
+	&.-i-slide-reverse{
+		flex-direction: column-reverse;
+	}
+}
+
+
+
+
+
+
+// loader
+
+.-i-loader {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: auto;
+	width: 10px;
+	height: 10px;
+	background-color: #FFFFFF;
+	animation: rotate 1s infinite ease-in-out;
+	transition: opacity 1s ease;	
+}
+.-i-loader-stop{
+	// border-radius: 0%;
+	animation-iteration-count: 0;
+	opacity: 0.2;
+	transform: scale(0.5);
+}
+
+@keyframes rotate {
+  0% {
+    transform: perspective(20px) rotateX(0deg) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(20px) rotateX(-180deg) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(20px) rotateX(-180deg) rotateY(-180deg);
+  }
+}
+
+

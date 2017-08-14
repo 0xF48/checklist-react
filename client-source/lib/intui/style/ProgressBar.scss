@@ -1,0 +1,26 @@
+.-i-progress-bar{
+	height: 6px;
+	width: 100%;
+	background: #32354B;
+	overflow: hidden;
+	
+	.-i-progress-bar-inner{
+		display: flex;
+		transition: transform 0.3s cubic-bezier(0.25, 0.34, 0, 1);
+		position: relative;
+		left: 0;
+		top: 0;
+		width: 200%;
+	}
+	.-i-progress-bar-left{
+		background: #7880B5;
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+	.-i-progress-bar-right{
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+}

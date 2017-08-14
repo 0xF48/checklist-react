@@ -1,0 +1,12 @@
+node_modules
+cache
+deploy-*.sh
+deploy.sh
+dump.*
+config.json
+config-*.json
+migrations
+.DS_Store
+data/*
+client-static/main.bundle.js
+client-static/main.bundle.js.map

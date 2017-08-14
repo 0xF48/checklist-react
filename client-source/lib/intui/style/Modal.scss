@@ -1,0 +1,33 @@
+@import './helpers';
+
+.-i-modal-wrap{
+	height: 100%;
+	.-i-modal-canvas{
+		height: 100%;
+		position: absolute;
+		left: 0px;
+		width: 100%;
+		top: 0px;
+	}
+	.-i-modal-content{
+		z-index: 1;
+		position: relative;
+
+	}
+	.-i-modal-close{
+		position: absolute;
+		right: 0px;
+		top: 0px;
+		width: 50px;
+		height: 50px;
+		cursor: pointer;
+		@include center;
+		color: white;
+		opacity: 0.7;
+		transition: opacity 0.3s ease;
+		z-index: 10;
+		&:hover{
+			opacity: 1;
+		}
+	}
+}

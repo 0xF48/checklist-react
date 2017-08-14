@@ -1,0 +1,65 @@
+@mixin w($num) {
+  width: 100%/12*$num;
+}
+
+@mixin col-m {
+	@for $i from 1 through 12 {
+		
+		.m#{$i}{
+			float: left;
+			@include w($i);
+		}
+	}
+}
+
+@mixin col-s {
+	@for $i from 1 through 12 {
+		.s#{$i}{
+			float: left;
+			@include w($i);
+		}
+	}
+}
+
+@mixin padding {
+	@for $i from 0 through 10 {
+		@for $j from 0 through 10 {
+			.pad-#{$i*5}-#{$j*5}{
+				padding: $i*5px  $j*5px; 
+			}
+		}
+	}
+}
+
+
+@mixin margin {
+	@for $i from 0 through 10 {
+		@for $j from 0 through 10 {
+			.mar-#{$i*5}-#{$j*5}{
+				margin: $i*5px  $j*5px; 
+			}
+		}
+	}
+}
+
+
+.flex{
+	display: flex;
+	&.down{
+		flex-direction: column;
+	}
+	&.right{
+		flex-direction: row;
+	}
+}
+
+
+@include col-s;
+@include col-m;
+@include padding;
+@include margin;
+
+@media only screen and (max-width: 600px){
+	@include col-s;
+}
+

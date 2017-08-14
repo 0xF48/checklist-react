@@ -1,0 +1,30 @@
+*{
+	box-sizing: border-box;
+}
+html,body{
+	margin: 0;
+	padding: 0;
+}
+
+@mixin center {
+	align-items : center;
+	display   : flex;
+	align-content : center;
+	justify-content: center;  
+}
+
+@mixin vert{
+	flex-direction: column;
+}
+
+.full-w{
+	width: 100%;
+}
+
+.hidden{
+	display: none;
+}
+
+.center{
+	@include center;
+}

@@ -1,0 +1,41 @@
+@import './helpers';
+
+.-i-overlay{
+	z-index: 90;
+	transition: opacity 0.1s ease;
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.8);
+    position: absolute;
+    height: 100%;
+    width: 100%;
+	left: 0px;
+    top: 0px;
+    @include center;
+}
+.-i-overlay-hidden{
+	pointer-events: none;
+	opacity: 0;
+}
+
+.-i-angle{
+	position: absolute;
+	height: 50px;
+	width: 50px;
+}
+
+.-i-angle-bottom{
+	left: calc(50% - 25px);
+	bottom:0;
+}
+.-i-angle-top{
+	left: calc(50% - 25px);
+	top:0;
+}
+.-i-angle-right{
+	right: 0%;
+	top: calc(50% - 25px);
+}
+.-i-angle-left{
+	left: 0%;
+	top: calc(50% - 25px);
+}

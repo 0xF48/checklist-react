@@ -1,0 +1,9 @@
+html
+	head
+		title budgetti auth
+		<meta name="description" content="Budget Tool">
+		<meta charset="utf-8">
+	body
+	script.
+		window.opener.onUserAuth(!{JSON.stringify(user)})
+		window.close()
