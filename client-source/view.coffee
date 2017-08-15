@@ -36,8 +36,8 @@ doneColor = (count,total)->
 	return 'rgb('+255+','+f+','+f+')'
 
 doneText = (count,total)->
-	# if !count && !total
-	# 	return null
+	if !count && !total
+		return null
 	h 'div',
 		style: {}
 		h 'span',
@@ -241,21 +241,25 @@ class User extends Component
 		if store.state.user.id == props.id
 			label = h 'div',
 				className: 'profile-self-label'
-
+		if !@props.img
+			icon = h 'i',
+				className: 'material-icons'
+				'person'
 		h 'div',
 			onClick: @props.onClick
 			className: 'profile-mini center'
-			style:
-				transform: ''
-				width: props.dim
-				height: props.dim
 			h 'div',
 				style:
 					backgroundImage: 'url('+@props.img+')'
 					transform: ''
-				className: 'avatar'
+				className: 'avatar center'
 				selected
-			label
+				icon
+				# label
+			h 'div',
+				className: 'profile-name'
+				@props.name
+			
 			# h 'div',
 			# 	className: 'name'
 			# 	@props.name
@@ -967,121 +971,6 @@ class addPinForm extends Component
 
 
 
-# class addListItemForm extends Component
-# 	constructor: (props)->
-# 		super(props)
-# 		if props.participants
-# 			selected = props.participants.map (user)->
-# 				return true
-# 		else
-# 			selected = [true]
-# 		@state=
-# 			text: props.name
-# 			selected: selected
-
-# 	componentDidMount: ->
-# 		@_input.focus()
-# 	render: (props,state)->
-# 		if props.users
-# 			participants = props.users.map (user,i)=>
-# 				opt = Object.assign selected: false,user
-# 				opt.selected = state.selected[i]
-# 				opt.dim = 60
-# 				opt.onClick = ()=>
-# 					@state.selected[i] = !@state.selected[i]
-# 					@setState()
-# 				h User, opt
-	
-
-# 		participants = sortUsers(participants)
-
-
-# 		participants.unshift h Button,
-# 			className: 'center button-person-add'
-# 			i: 'person_add'
-# 			size: 60
-
-# 		h 'form',
-# 			onSubmit: (e)=>
-# 				actions.addListItem @state
-# 				e.preventDefault()
-# 				return false
-# 			className: 'form'
-# 			h 'div',
-# 				className: 'title'
-# 				if props.modal_content == 'listSettings' then 'edit list' else 'create a new list'
-# 			h InputText,
-# 				onChange: (e)=>
-# 					@setState
-# 						text: e.target.value
-# 				ref: (e)=>
-# 					@_input = e
-# 				type: 'text'
-# 				label: 'list name'
-# 				value: @state.text
-# 			h Slide,
-# 				height: 80
-# 				participants
-			
-# 			h SquareButton,
-# 				outerClassName: 'input-amount-submit full-w'
-# 				reverse: no
-# 				disabled: !@state.text
-# 				sClass: 'b1'
-# 				pClass: 'b3'
-
-# 				height: g.dim
-# 				vertical: yes
-# 				onClick: ()=>
-# 					actions.addListItem @state
-# 				label:if props.modal_content == 'listSettings' then 'save' else 'create'
-
-
-# class ListItemAdd extends Component
-# 	render: (props,state)->
-# 		h Slide,
-# 			className: 'list-item'
-# 			center: yes
-# 			onClick: ()->
-# 				actions.setModal('addListItem')
-# 			h Button,
-# 				i: 'add'
-
-
-# class ListsView extends Component
-# 	constructor: (props)->
-# 		super(props)
-# 	render: (props,state)->
-# 		# log props
-# 		items = props.group_state.lists.map (list,i)->
-# 			list.index = i
-# 			h GridItem,
-# 				w: 2,h: 1,key: list.id,
-# 					h ListItem,list
-
-# 		# log 'render lists view'
-
-# 		h Slide,
-# 			vertical:yes
-# 			innerClassName: 'lists-inner'
-# 			h Grid,
-# 				w: 4
-# 				className: 'lists-grid'
-# 				fixed : false
-# 				auto: true
-# 				animate: !g.isSafari && true || false
-# 				max_grid_height_beta : 2
-# 				max_reached: true
-# 			,
-# 				items
-# 			h Slide,
-# 				height: g.dim
-# 				h Button,
-# 					onClick: ()->
-# 						actions.setModal('addListItem')
-# 					i: 'add_box'
-
-
 class SlideShow extends Component
 	constructor: (props)->
 		super(props)
@@ -1663,6 +1552,7 @@ class LinkGroup extends Component
 					className: 'b0 invite-link select'
 					h 'span',className:'select',@props.view.group_invite_link.link
 				h SquareButton,
+					slide_duration: 0.1
 					vertical: no
 					reverse: yes
 					width: g.dim
@@ -1694,14 +1584,24 @@ class ModalView extends Component
 
 		# console.log modal_content
 
+		show = !!@props.view.show_modal
+
+		if props.user && !props.user.name
+			show = true
+			modal_content = h UserSettings,props
+		
+
+
+
 		if ctn != 'slideshow'
 			modal = h Modal,
 				className: 'modal'
 				backColor: modal_color
-				show: !!@props.view.show_modal
+				show: show
 				mouse: g.mouse
-				onClick: ()->
-					actions.hideModal()
+				onClick: ()=>
+					if @props.user && @props.user.name
+						actions.hideModal()
 				modal_content
 			main_view = null
 
@@ -1908,6 +1808,9 @@ class Menu extends Component
 			show_more_right: no
 		actions.logout()
 
+	goUserSettings: ()->
+		actions.setModal('userSettings')
+
 	opt: (icon,onClick,active,hover,w)->
 		h SquareButton,
 			className: 'btn'
@@ -1997,8 +1900,16 @@ class AddFriendView extends Component
 			search: null
 	search: ()->
 		alert 'search'
+
+	componentDidMount: ->
+		@_input.focus()	
+
 	render: (props,state)=>
-		results = []
+		results = props.view.search_users.map (u)->
+			u.key = u._id
+			h User,u
+
+
 		h Slide,
 			vertical: yes
 			className: 'add-friend-view'
@@ -2011,6 +1922,8 @@ class AddFriendView extends Component
 				vertical: no
 				height: g.dim
 				h InputText,
+					ref: (e)=>
+						@_input = e
 					onChange: (e)=>
 						@setState
 							search: e.target.value
@@ -2101,16 +2014,11 @@ class UserView extends Component
 				max_grid_height_beta : 2
 				max_reached: true
 				group_items
-			h Slide,
-				className: 'title pad-0-20'
-				height: g.dim
-				# onMouseEnter: ()=>
-				# 	@setState
-				# 		hover_friends: true
-				# onMouseLeave: ()=>
-				# 	@setState
-				# 		hover_friends: no
-				'my friends:'
+
+			@title 'my friends:'
+
+
+				
 			h Slide,
 				auto: yes
 				className: 'lists-inner'
@@ -2127,7 +2035,7 @@ class UserView extends Component
 					friend_items
 
 
-
+MAX_NAME_LENGTH = 12
 class UserSettings extends Component
 	constructor: (props)->
 		super(props)
@@ -2137,13 +2045,44 @@ class UserSettings extends Component
 				email: props.user.email
 				img: props.user.img
 		else
-			@state = {}
-	
+			@state =
+				name: ''
+
+
 	componentDidMount: ->
 		@_input.focus()	
-	
+
+
+	setPicture: (e)=>
+		file = e.target.files[0]
+		url = URL.createObjectURL(file)
+		@setState
+			file: file
+			img: url
+		# img.onload = ()->
+		# 	dim = getPinWH(img.width,img.height)
+		# 	Object.assign state,dim
+
+	save: =>
+		if @state.name.length > MAX_NAME_LENGTH
+			actions.showError 'name is too long max:'+MAX_NAME_LENGTH
+		actions.setUser
+			name: @state.name
+			file: @state.file
+
+
 	render: =>
+	
+		user = h User,
+			img: @state.img
+			name: @state.name
+
+	
 		h Slide,
+			className: 'modal-link'
+			auto: yes
+			vertical: yes
+			onEnter: @save
 			h InputText,
 				onChange: (e)=>
 					@setState
@@ -2152,13 +2091,28 @@ class UserSettings extends Component
 					@_input = e
 				type: 'text'
 				label: 'name'
+				height: g.dim
 				value: @state.name
 			h InputFile,
-				onChange: (e)=>
-					@setState
-						img: e.target.files[0]
+				height: g.dim
+				onChange: @setPicture
 				label: 'picture'
 				value: null
+			h Slide,
+				height: g.dim*3
+				center: yes
+				vertical: yes
+				user
+			h SquareButton,
+				outerClassName: 'input-amount-submit full-w'
+				reverse: no
+				disabled: !@state.name || @state.name == @props.user.name || @state.name.length > MAX_NAME_LENGTH
+				sClass: 'b2'
+				pClass: 'b3'
+				height: g.dim
+				vertical: no
+				onClick: @save
+				label: 'save'
 
 
 
@@ -2182,12 +2136,31 @@ class MainView extends Component
 
 	render: (props,state)=>
 
+
+
+
 		if props.view.main_view == 'home'
-			main = h HomeView,props
-		else if props.view.main_view == 'group'
-			main = h GroupView,props
+			main_top = h HomeView,props
+		
+
+		if props.group
+			main_top = h GroupView,props
+		
+
+		if props.user
+			main_bot = h UserView,props
+
+
+		if props.view.main_view == 'home'
+			main_pos = 0
 		else if props.view.main_view == 'user'
-			main = h UserView,props
+			main_pos = 1
+		else if props.view.main_view == 'group'
+			main_pos = 0
+
+
+
+
 
 
 		if props.view.main_view == 'group'
@@ -2226,8 +2199,6 @@ class MainView extends Component
 						# reverse: yes
 						i: 'mode_edit'
 						active: props.view.modal_content == 'editGroup'
-
-
 				]
 				left_children: [
 					h 'span',
@@ -2238,9 +2209,9 @@ class MainView extends Component
 						center: yes
 						className: 'list-count'
 						doneText(props.group.done_count,props.group.total_count)
-					
 				]
 				state: props
+		
 		else if props.view.main_view == 'user'
 			menu = h Menu,
 				left_options: [
@@ -2279,7 +2250,19 @@ class MainView extends Component
 				beta: 100
 				vertical: yes
 				menu
-				main
+				h Slide,
+					beta: 100
+					slide: yes
+					pos: main_pos
+					ease_dur: 0.3
+					# ease: 'cubic-bezier(0, 0.85, 0.37, 1.01)'
+					vertical: yes
+					h Slide,
+						beta: 100
+						main_top
+					h Slide,
+						beta: 100
+						main_bot
 				h ModalView,props
 				h Overlay,
 					strokeStyle: g.light

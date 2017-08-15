@@ -1,3 +1,4 @@
+path = require 'path'
 module.exports =
 	save_dir: path.join(__dirname,'/data')
 	save_url: '/data'

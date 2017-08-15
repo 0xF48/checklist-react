@@ -86,12 +86,14 @@ class Actions
 		sendState 
 			type: 'get'
 			route: 'api/user/logout'
+		@hideModal()
 
 
 	goUserHome: (state)->
 		sendState
 			type: 'get'
 			route: 'api/user'
+		@hideModal()
 
 
 	addTodo: (state)->
@@ -221,10 +223,42 @@ class Actions
 
 
 
+
 	showAddSubTodo: (todo)->
 		return
 			parent_todo: todo
 		# @setModal('addTodo')
+
+	searchUsers: (name)->
+		sendState
+			type: 'get'
+			route: '/api/user/find/user'
+			state: 
+				name: name
+
+	setUser: (state)->
+		
+		
+		if state.file
+			form = new FormData()
+			form.append 'file',state.file
+			uploadImage form,
+			(img_url)->
+				user = 
+					name: state.name
+					img: img_url
+				sendState
+					type: 'post'
+					route: '/api/user/set'
+					state: user
+		else
+			user = 
+				name: state.name
+			sendState
+				type: 'post'
+				route: '/api/user/set'
+				state: user
+
 
 	showGroup: (id)->
 		sendState

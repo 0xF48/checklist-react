@@ -137,7 +137,7 @@ body{
 }
 .b2{
 	background: $b2;
-	color: $b0;
+	color: white;
 }
 .b3{
 	background: $b3;
@@ -357,7 +357,7 @@ i{
 
 .invite-link{
 	line-height: $dim;
-	color: grey;
+	color: $gain;
 	font-family: 'Roboto Slab', serif;
 	text-align: center;
 	span{
@@ -390,7 +390,7 @@ i{
 	color: #e0e0e0;
 	font-size: 16px;
 	font-family: 'Roboto Slab', serif;
-	padding: 50px;
+	padding: 30px;
 }
 
 .list{
@@ -654,8 +654,8 @@ span{
 	height: 10px;
 	width: 10px;
 	background: rgb(5, 189, 255);
-	bottom: 15%;
-	right: 15%;
+	bottom: 6%;
+	right: 8%;
 	border-radius: 5px;
 }
 .profile-mini-selected{
@@ -672,25 +672,60 @@ span{
     justify-content: center;
 }
 
+.search-results{
+	margin-top: 10px;
+	display: flex;
+    justify-content: center;
+    .profile-mini{
+    	margin:10px;
+    }
+}
 
 .profile-mini{
 	position: relative;
 	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	width: 100%;
+	overflow: hidden;
+	height: 100%;
+	max-width: 120px;
+	max-height: 120px;
+	background:  $b1a;
+	padding: 5px;
+	cursor: pointer;
+	transition: background 0.3s ease;
+
+	&:hover{
+		background: $b0;
+	}
+
+	.profile-name{
+		font-family: 'Roboto Slab', serif;
+		color: $b3;
+		line-height: 30px;
+		font-size: 16px;
+		text-align: center;
+		height: 30px;
+	}
 
 	.avatar{
 		background: #243035;
+		position: relative;
 		cursor: pointer;
 		background-position: center;
 		background-size: cover;
-		height: 70%;
-		width: 70%;
-		// border: 4px solid rgba(0,0,0,0.3);
-		border-radius: 50%;
+		height: 70px;
+		width: 70px;
+		// border: 2px solid rgba(255, 255, 255, 0.15);
+		border-radius: 50%;	
 	}
+
 	.name{
 		animation: color 0.3s ease;
 		font-family: Merienda;
 	}
+
 }
 
 .button-person-add{

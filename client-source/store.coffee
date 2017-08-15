@@ -16,6 +16,7 @@ window.initial_state =
 		edit_todo_index: null
 		slideshow_pins: []
 		slideshow_pin: null
+		search_users: []
 
 
 

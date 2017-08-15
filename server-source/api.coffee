@@ -49,7 +49,12 @@ bindRequest = (req,res,next)->
 		next()
 	
 
-
+clearState = (req)->
+	req.user = null
+	req.session.view = {}
+	req.session.save()
+	req.view = null
+	req.group = null
 
 
 getState = (req,view)->
@@ -58,6 +63,8 @@ getState = (req,view)->
 	state.user = if req.user then req.user.getState() else null
 	state.group = if req.group then req.group.getState() else null
 	state.view = if req.view then req.view.getState() else {}
+	if view
+		Object.assign state.view,view
 	return state
 
 
@@ -79,11 +86,12 @@ user_auth = (req,res,next)->
 
 app.use '/user/',user_auth
 
-.post '/user/state', (req,res,next)->	
-	req.user
-	.setState(req.body.user)
-	.then ()->
-		res.redirect '/state'
+
+.post '/user/set', (req,res,next)->	
+	req.user.name = req.body.name || req.user.name
+	req.user.img = req.body.img || req.user.img
+	req.user.save ()->
+		res.send getState(req,show_modal:false)
 
 
 .post '/user/upload',(req,res,next)->
@@ -109,9 +117,8 @@ app.use '/user/',user_auth
 
 .get '/user/logout', (req,res)->
 	req.logout()
-	req.view.setState
-		main_view: 'home'
-	res.send getState(req)
+	clearState(req)
+	res.send getState(req,main_view:'home')
 
 
 
@@ -204,16 +211,21 @@ app
 
 
 .get '/user/find/user', (req,res)->
-	regex = new RegExp(req.query.name+'*', 'gi')
+	if !req.query.name
+		return res.json getState(req,search_users:[])
+
+	regex = new RegExp('^'+req.query.name, 'g')
 	User.find
 		name: regex
-	.select '_id name'
+	.select('_id name img')
 	.lean()
 	.then (users)->
-		console.log users
-		req.view.setState
-			search_users: users
-		res.json getState(req)
+		# users = users.map (u)->
+		# 	_id: u._id
+		# 	name: u.name
+		# 	img: u.img
+		res.json getState(req,search_users:users)
+
 
 .get '/user/join/:group_invite', (req,res,next)->
 	req.user
@@ -225,6 +237,7 @@ app
 			main_view: 'group'
 		res.redirect '/'
 	.catch next
+
 
 .get '/user/group/:group_id', (req,res)->
 	setGroup(req,req.group)
