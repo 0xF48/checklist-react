@@ -1,8 +1,7 @@
 require './style/Input.scss';
 #Input base class
 
-{createElement,Component} = require 'react'
-el = createElement
+{h,Component} = require 'preact'
 cn = require 'classnames'
 
 class InputTextArea extends Component
@@ -41,8 +40,8 @@ class InputTextArea extends Component
 		@resize()
 	render: ->
 		if @props.label
-			label = el 'span',className:'label',@props.label
-		area = el 'textarea',
+			label = h 'span',className:'label',@props.label
+		area = h 'textarea',
 			onBlur: @onBlur
 			onFocus: @onFocus
 			onChange: @onChange
@@ -53,12 +52,12 @@ class InputTextArea extends Component
 
 		,@props.value		
 
-		bar = el 'div',className:'textarea-bar'
-		el 'div',
+		bar = h 'div',className:'textarea-bar'
+		h 'div',
 			onClick: @onClick
 			# onFocus: @onFocus
 			# onBlur: @onBlur
-			className: cn '-i-input',@state.focus && 'focus','textarea',@props.className,@props.disabled && 'disabled'
+			className: cn '-i-input',@state.focus && 'focus'||'','textarea',@props.className,@props.disabled && 'disabled'||''
 		,
 			bar
 			label

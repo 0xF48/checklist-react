@@ -1,8 +1,7 @@
 
 # Input Text
 Input = require './Input.coffee'
-{createElement,Component} = require 'react'
-el = createElement
+{h,Component} = require 'preact'
 cn = require 'classnames'
 
 class InputFile extends Component
@@ -59,7 +58,7 @@ class InputFile extends Component
 	
 
 	
-		el Input,
+		h Input,
 			onClick: @onClick
 			# onFocus: @onFocus
 			onBlur: @onBlur
@@ -67,17 +66,17 @@ class InputFile extends Component
 			label: @props.label
 			className: cn 'file',@props.className,!@state.value && 'focus',(@state.focus || @state.value) && 'has-data'
 		,
-			label = el 'input',
+			label = h 'input',
 				type: 'text'
 				disabled: true
 				style: style
 				className: cn '-i-input-text',!@state.value && 'hidden'
 				value: @state.value
-			icon = el 'i',
+			icon = h 'i',
 				className: cn 'material-icons',@state.value && 'hidden'
 			,'file_upload'
 
-			el 'input',
+			h 'input',
 				name: @props.name
 				# value: @state.initial_value || @state.value
 				type: 'file'

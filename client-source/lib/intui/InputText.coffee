@@ -1,8 +1,7 @@
 
 # Input Text
 Input = require './Input.coffee'
-{createElement,Component} = require 'react'
-el = createElement
+{h,Component} = require 'preact'
 cn = require 'classnames'
 
 class InputText extends Component
@@ -22,13 +21,15 @@ class InputText extends Component
 			focus: no
 		@_input.blur()
 	onKey: (e)=>
+		console.log 'TEST'
 		if e.keyCode == 13
 			@props.onEnter && @props.onEnter(e)
 		@props.onKeyDown && @props.onKeyDown(e)
-	onChange: (e)=>
-		@setState
-			initial_value: !@props.locked && null
-			value: e.target.value
+	# onChange: (e)=>
+	# 	# console.log 'onchange'
+	# 	@setState
+	# 		initial_value: !@props.locked && null
+	# 		value: e.target.value
 		# @props.onChange && @props.onChange(e)
 	componentWillUpdate: (props,state)=>
 		if @props.value != props.value
@@ -43,27 +44,27 @@ class InputText extends Component
 		if @props.barColor
 			style = 
 				'border-color':@props.barColor
-
-		el Input,
+		props = Object.assign({},@props,{
+			ref: (e)=>
+				@_input = e
+			onKeyDown: @onKey
+			onFocus: @onFocus
+			onBlur: @onBlur
+			onInput: @props.onChange
+			# value: @state.initial_value || @state.value 
+			type: @props.type || 'text'
+			style: style
+			className: '-i-input-text'
+		})
+		h Input,
 			onFocus: @onFocus
 			onBlur: @onBlur
 			disabled: @props.disabled
 			# hideLabel: @props.hideLabel
 			label: @props.label
 			icon: @props.icon
-			className: cn @props.className,@state.focus && 'focus',(@state.focus || @state.value) && 'has-data',@props.icon_label && '-i-icon-label'
-		,el 'input', Object.assign({},@props,{
-				ref: (e)=>
-					@_input = e
-				onKeyDown: @onKey
-				onFocus: @onFocus
-				onBlur: @onBlur
-				# onChange: @onChange
-				# value: @state.initial_value || @state.value 
-				type: @props.type || 'text'
-				style: style
-				className: '-i-input-text'
-			})
+			className: cn @props.className,@state.focus && 'focus'||null,(@state.focus || @state.value) && 'has-data'||null,@props.icon_labh && '-i-icon-label'||null
+			h 'input', props
 
 
 module.exports = InputText

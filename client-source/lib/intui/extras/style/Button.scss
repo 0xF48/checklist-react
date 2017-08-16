@@ -1,0 +1,25 @@
+@import '../../style/helpers';
+
+.-i-btn{
+	cursor: pointer;
+	// background: #5C618C;
+	width: 100%;
+	position: relative;
+	// border-radius: 4px;
+
+
+
+
+	i{
+		font-size: 24px;
+	}
+
+	&.disabled{
+		cursor: default;
+		pointer-events: none;
+		opacity: 0.3;
+	}
+	
+	@include center;
+	display: inline-flex;
+}

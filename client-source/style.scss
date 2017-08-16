@@ -423,6 +423,17 @@ span{
     }
 }
 
+.btn-rotate{
+	i{
+		transition: transform 0.4s cubic-bezier(0.25, 0.34, 0, 1);
+	}
+}
+.btn-rotate-90{
+	i{
+		transform: rotate(-90deg)
+	}
+}
+
 // .check-btn-cancel{
 // 	background: $pink;
 // 	color: $b0;
@@ -710,7 +721,7 @@ span{
 	}
 
 	.avatar{
-		background: #243035;
+		background: #2b383e;
 		position: relative;
 		cursor: pointer;
 		background-position: center;

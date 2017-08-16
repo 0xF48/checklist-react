@@ -1,5 +1,5 @@
 {h,Component} = require 'preact'
-Slide = require('./intui/Slide')
+Slide = require('./intui/Slide.coffee')
 
 
 class Viewer extends Component

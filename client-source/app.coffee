@@ -21,7 +21,18 @@ Alt = require('alt');
 window.alt = new Alt();
 window.actions = require './actions.coffee'
 window.store = 	require './store.coffee'
+
+
 View = require './view.coffee'
 render h(View,{}),document.getElementById('checki')
+
+
+
+	
+# Test = require './slide_test.coffee'
+# render h(Test,{}),document.getElementById('checki')
+
+
+
 require './style.scss'
 

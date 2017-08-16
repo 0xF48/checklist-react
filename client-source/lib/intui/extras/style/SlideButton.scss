@@ -1,0 +1,11 @@
+.-i-slide-btn{
+	cursor: pointer;
+	&.disabled{
+		pointer-events: none;
+		opacity: 0.3;
+		cursor: default;
+		i{
+			cursor: default;
+		}
+	}
+}

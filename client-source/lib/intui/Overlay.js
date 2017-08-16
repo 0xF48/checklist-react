@@ -65,25 +65,15 @@ var Overlay = React.createClass({
 		var d = 6;
 
 
-		this.ctx.moveTo(25+Math.cos(off+angle)*10,25+Math.sin(off+angle)*10);
-		this.ctx.lineTo(25,25);
-		this.ctx.lineTo(25+Math.cos(off+-angle)*10,25+Math.sin(off+-angle)*10);
+		this.ctx.moveTo(25+Math.cos(off+angle)*10,25+Math.sin(off+angle)*10)
+		this.ctx.lineTo(25,25)
+		this.ctx.lineTo(25+Math.cos(off+-angle)*10,25+Math.sin(off+-angle)*10)
 		
-
-		this.ctx.moveTo(25+Math.cos(off+angle)*10,25+d+Math.sin(off+angle)*10);
-		this.ctx.lineTo(25,25+d);
-		this.ctx.lineTo(25+Math.cos(off+-angle)*10,25+d+Math.sin(off+-angle)*10);
-		this.ctx.stroke();
-
-
+		this.ctx.moveTo(25+Math.cos(off+angle)*10,25+d+Math.sin(off+angle)*10)
+		this.ctx.lineTo(25,25+d)
+		this.ctx.lineTo(25+Math.cos(off+-angle)*10,25+d+Math.sin(off+-angle)*10)
+		this.ctx.stroke()
 	},
-
-	// onClick: function(e){
-	// 	if(this.props.disabled){
-	// 		return false
-	// 	}
-	// 	this.props.onClick(e)
-	// },
 
 	render: function(){
 		if(this.props.dir != null && !this.props.dir.match('top|bottom|left|right')){

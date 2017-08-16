@@ -1,8 +1,8 @@
 require './style/ProgressBar.scss';
 #Input base class
 
-{createElement,Component} = require 'react'
-el = createElement
+{h,Component} = require 'preact'
+el = h
 cn = require 'classnames'
 
 class ProgressBar extends Component

@@ -1,17 +1,17 @@
 {h,Component} = require 'preact'
 
-Slide = require 'intui/Slide.js'
-SlideMixin = require 'intui/SlideMixin.js'
+Slide = require 'intui/Slide.coffee'
 Overlay = require 'intui/Overlay.js'
-Button = require 'intui/Button.coffee'
-SlideButton = require 'intui/SlideButton.coffee'
+Button = require 'intui/extras/Button.coffee'
 InputFile = require 'intui/InputFile.coffee'
 InputText = require 'intui/InputText.coffee'
 InputTextArea = require 'intui/InputTextArea.coffee'
-# ProgressBar = require 'intui/ProgressBar.coffee'
 Modal = require 'intui/Modal.coffee'
 {Grid,GridItem,GridMixin} = require 'intui/TetrisGrid.js'
-SquareButton = require 'intui/SquareButton.coffee'
+
+SlideButton = require 'intui/extras/SlideButton.coffee'
+
+
 monthNames = ["January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December"]
 Viewer = require './lib/Viewer.coffee'
 
@@ -102,7 +102,7 @@ class editTodoForm extends Component
 				type: 'text'
 				label: 'name'
 				value: @state.name
-			h SquareButton,
+			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: yes
 				disabled: @state.name == @state.initial_name
@@ -160,7 +160,7 @@ class addTodoForm extends Component
 				type: 'text'
 				label: 'name'
 				value: @state.text
-			h SquareButton,
+			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: yes
 				disabled: !@state.text
@@ -182,16 +182,13 @@ class ExpandBtn extends Component
 		super(props)
 	render: (props)->
 		# @props.hover && 0 || @props.done && 0
-		h SquareButton,
-			className: @props.expanded && 'expand-btn expanded' || 'expand-btn'
-			# pClass: @props.expanded && 'check-btn-cancel' 
-			width: g.dim
-			vertical: no
-			offset: 0
+		h Button,
+			i: 'keyboard_arrow_down'
+			class: @props.expanded && 'expand-btn expanded' || 'expand-btn'
 			onMouseEnter: @props.onMouseEnter
 			onMouseLeave: @props.onMouseLeave
-			# hover: hover
-			# active: @props.done
+			vertical: no
+			dim: g.dim
 			onClick: (e)=>
 				props.onClick && props.onClick()
 				e.preventDefault()
@@ -218,7 +215,7 @@ class Check extends Component
 					hover: no
 				if @props.onMouseLeave then @props.onMouseLeave(e)
 			className: cn 'btn', 'check-btn', @props.done && 'check-btn-done'
-			size: g.dim
+			width: g.dim
 			vertical: no
 			onClick: (e)=>
 				# log 'INDEX ',@props.index
@@ -258,7 +255,7 @@ class User extends Component
 				# label
 			h 'div',
 				className: 'profile-name'
-				@props.name
+				@props.name || 'Anon'
 			
 			# h 'div',
 			# 	className: 'name'
@@ -560,6 +557,7 @@ class Todo extends Component
 
 		# SHOW PINS BUTTON
 		show_pins_button = h Button,
+			width: g.dim
 			className: cn 'pin-btn',active && 'active',hide_pin && 'hidden-pin-btn'
 			onMouseEnter: (e)=>
 				@setState
@@ -612,201 +610,8 @@ class Todo extends Component
 			sub_todos
 			
 
-# class ListItem extends Component
-# 	render: (props,state)->
-# 		participants = props.participants.map (user)->
-# 			h User, Object.assign {dim:g.dim},user
-
-# 		gstate = store.getState()
-# 		# log participants
-# 		participants = sortUsers(participants)
-
-# 		h Slide,
-# 			onClick: (e)->
-# 				actions.showList(props.index)
-# 				e.preventDefault()
-# 				e.stopPropagation()
-# 				return false
-# 			vertical: yes
-# 			center: yes
-# 			className: 'list-item'
-# 			h Slide,
-# 				height: g.dim/2
-# 				center: yes
-# 				className: 'list-count'
-# 				# style: 
-# 				# 	color: doneColor(props.done_count,props.total_count)
-# 				doneText(props.done_count,props.total_count)
-# 			h Slide,
-# 				height: g.dim/2
-# 				center: yes
-# 				className: 'list-name'
-# 				h 'span',null,props.name
-# 			h Slide,
-# 				className: 'list-participants'
-# 				height: g.dim
-# 				center: yes
-# 				participants
 
 
-# class joinRoomPass extends Component
-# 	constructor: (props)->
-# 		super(props)
-# 		@state =
-# 			pass: ''
-# 	render: (props,state)->
-# 		  h Slide,
-# 		  	center: yes
-# 		  	h InputText
-# 		  		type: 'number'
-# 		  		onChange: (e)->
-# 		  			@setState
-# 		  				pass: e.target.value
-# 		  	h SquareButton,
-# 				className: ''
-# 				reverse: yes
-# 				disabled: !@state.pass
-# 				sClass: 'b1a'
-# 				pClass: 'b3'
-# 				width: 150
-# 				height: g.dim
-# 				vertical: yes
-# 				onClick: ()=>
-# 					actions.sendState
-# 						pass: @state.pass
-# 				label:label
-
-
-# class CreateUserForm extends Component
-# 	constructor: (props)->
-# 		super(props)
-# 		@state=
-# 			name: null
-# 			picture: null
-	
-# 	componentDidMount: ->
-# 		@_input.focus()
-
-# 	submit: =>
-# 		f = new FormData()
-# 		f.append 'file', @state.picture
-# 		f.append 'name', @state.name
-# 		actions.newGroupUser f
-
-# 	render: ->
-# 		h 'form',
-# 			onSubmit: (e)=>
-# 				@submit()
-# 				e.preventDefault()
-# 				e.stopPropagation()
-# 				return false
-# 			className: 'form'
-# 			h 'div',
-# 				className: 'title'
-# 				'add user'
-# 			h InputText,
-# 				onChange: (e)=>
-# 					@setState
-# 						name: e.target.value
-# 				ref: (e)=>
-# 					@_input = e
-# 				type: 'text'
-# 				label: 'name'
-# 				placeholder: 'Bob'
-# 				value: @state.name
-# 			h InputFile,
-# 				onChange: (e)=>
-# 					@setState
-# 						picture: e.target.files[0]
-# 				ref: (e)=>
-# 					@_file = e
-# 				label: 'picture'
-# 				value: null
-# 			h SquareButton,
-# 				outerClassName: 'input-amount-submit full-w'
-# 				reverse: yes
-# 				disabled: !@state.name
-# 				sClass: @state.text && 'input-amount-submit-s' || 'input-amount-submit-false'
-# 				pClass: 'input-amount-submit-p'
-# 				height: g.dim
-# 				vertical: yes
-# 				onClick: (e)=>
-# 					@submit()
-# 					e.preventDefault()
-# 					e.stopPropagation()
-# 					return false
-# 				i: 'check'
-
-
-
-# class joinRoomView extends Component
-# 	constructor: (props)->
-# 		super(props)
-# 		@state = 
-# 			update: false
-# 			selected_index: null
-# 	render: (props,stats)->
-
-
-
-# 		users = props.group_state.users.map (user,i)=>
-# 			user = Object.assign {selected:@state.selected_index == i},user
-# 			user.dim = g.dim*2
-# 			user.onClick = ()=>
-# 				@setState
-# 					update: !@state.update
-# 					selected_index: i
-# 			h User, user
-
-		
-
-# 		if typeof @state.selected_index == 'number'
-# 			label = 'im '+props.group_state.users[@state.selected_index].name+' !'
-# 		else
-# 			label = 'click on a user!'
-
-# 		if !props.group_state.users.length
-# 			btn = h SquareButton,
-# 				className: 'input-amount-submit full-w'
-# 				reverse: yes
-# 				# disabled: typeof @state.selected_index != 'number'
-# 				sClass: 'b1a'
-# 				pClass: 'b3'
-# 				width: 150
-# 				height: g.dim
-# 				vertical: yes
-# 				onClick: ()=>
-# 					actions.setModal('createUser')
-# 				label: 'add user'
-# 		else
-# 			btn = h SquareButton,
-# 				className: 'input-amount-submit full-w'
-# 				reverse: yes
-# 				disabled: typeof @state.selected_index != 'number'
-# 				sClass: 'b1a'
-# 				pClass: 'b3'
-# 				width: 150
-# 				height: g.dim
-# 				vertical: yes
-# 				onClick: ()=>
-# 					actions.setMyUser(@state.selected_index,props.group_state.users[@state.selected_index])
-# 				label:label
-	
-# 		h Slide,
-# 			center: yes
-# 			className: 'joinRoomView'
-# 			vertical: yes
-# 			h Slide,
-# 				center: yes
-# 				height: g.dim
-# 				className: 'list-name'
-# 				'who are you?'
-# 			h Slide,
-# 				className: 'room-members'
-# 				auto: yes
-# 				center: yes
-# 				users
-# 			btn
 
 
 class Slideshow extends Component
@@ -842,7 +647,7 @@ class addPinForm extends Component
 			is_event: is_event
 
 	btn: (type)->
-		h SquareButton,
+		h SlideButton,
 			className: 'pin-type-button'
 			# reverse: yes
 			disabled: @props.is_event
@@ -956,7 +761,7 @@ class addPinForm extends Component
 				@btn('link')
 				@btn('textsms')
 			ctx
-			h SquareButton,
+			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: no
 				disabled: !check_submit
@@ -1090,7 +895,7 @@ class ListItemView extends Component
 
 
 		options = [
-			h SquareButton,
+			h SlideButton,
 				onClick: actions.addTodo
 				className: 'btn'
 				pClass: 'b3'
@@ -1100,7 +905,7 @@ class ListItemView extends Component
 				i: 'date_range'
 				active: @state.filter_dates
 				onClick: @filterDates
-			h SquareButton,
+			h SlideButton,
 				onClick: @filterTodos
 				className: 'btn'
 				sClass: ''
@@ -1128,7 +933,7 @@ class ListItemView extends Component
 				height: g.dim
 				# vertical: no
 				options
-				h SquareButton,
+				h SlideButton,
 					onClick: @showGroupPins
 					outerClassName: 'show-listitem-pins'
 					sClass: ''
@@ -1152,9 +957,10 @@ class ListItemView extends Component
 					onClick: ()->
 						actions.setModal('addTodo')
 					className: 'add-btn'
-					size: g.dim*2
+					width: g.dim*2
+					height: g.dim*2
 					i: 'add'
-				# h SquareButton,
+				# h SlideButton,
 				# 	height: g.dim*2
 				# 	width: g.dim*2
 				# 	className: 'btn list-alt'
@@ -1292,7 +1098,7 @@ class PinsView extends Component
 			pre: h 'div',
 				# height: g.dim
 				className: 'pins-options'
-				h SquareButton,
+				h SlideButton,
 					onClick: actions.addTodo
 					className: 'btn pins-option'
 					key: '1'
@@ -1307,7 +1113,7 @@ class PinsView extends Component
 						log 'ON CLICK 1'
 						@setState
 							filter: if @state.filter == 'plan' then null else 'plan' 
-				h SquareButton,
+				h SlideButton,
 					onClick: actions.addTodo
 					className: 'btn pins-option'
 					key: '2'
@@ -1336,6 +1142,7 @@ class UserLoginView extends Component
 			email: null
 			pass: null
 	render: ()=>
+		console.log 'RENDER',@state.email,@state.pass
 		h Slide,
 			vertical: yes
 			auto: yes
@@ -1363,7 +1170,7 @@ class UserLoginView extends Component
 				value: @state.pass
 			h Slide,
 				height: g.dim
-			h SquareButton,
+			h SlideButton,
 				onClick: @login
 				className: 'btn'
 				sClass: 'b0'
@@ -1427,7 +1234,7 @@ class UserSignupView extends Component
 				disabled: @props.disabled
 				label: 'confirm pass'
 				value: @state.pass_confirm
-			h SquareButton,
+			h SlideButton,
 				onClick: @signup
 				className: 'btn'
 				sClass: 'b0'
@@ -1551,7 +1358,7 @@ class LinkGroup extends Component
 				h Slide,
 					className: 'b0 invite-link select'
 					h 'span',className:'select',@props.view.group_invite_link.link
-				h SquareButton,
+				h SlideButton,
 					slide_duration: 0.1
 					vertical: no
 					reverse: yes
@@ -1734,7 +1541,7 @@ class EditGroupForm extends Component
 				type: 'text'
 				label: 'name'
 				value: @state.name
-			h SquareButton,
+			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: yes
 				disabled: !@state.name
@@ -1778,7 +1585,7 @@ class CreateGroupForm extends Component
 				type: 'text'
 				label: 'name'
 				value: @state.name
-			h SquareButton,
+			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: yes
 				disabled: !@state.name
@@ -1812,14 +1619,16 @@ class Menu extends Component
 		actions.setModal('userSettings')
 
 	opt: (icon,onClick,active,hover,w)->
-		h SquareButton,
-			className: 'btn'
-			# sClass: 'b0'
-			pClass: 'b3'
+		h SlideButton,
+			# className: 'btn'
+			sClass: 'b3'
+			pClass: ''
 			width: g.dim * (w || 1)
 			vertical: yes
 			hover: hover
-			reverse: no
+			reverse: yes
+			# active_index_offset: 5
+			index_offset: 5
 			i: icon
 			active: active
 			onClick: onClick
@@ -1828,7 +1637,7 @@ class Menu extends Component
 	render: (props,state)->
 
 		more_btn_right = h Button,
-			className: 'btn'
+			className: cn 'btn btn-rotate',@state.show_more_right && 'btn-rotate-90'
 			i: 'more_horiz'
 			# active: @state.show_more
 			disabled: !props.state.user
@@ -1930,7 +1739,7 @@ class AddFriendView extends Component
 						actions.searchUsers(@state.search)
 					placeholder: 'search'
 					value: @state.search
-				h SquareButton,
+				h SlideButton,
 					vertical: no
 					reverse: yes
 					width: g.dim
@@ -2019,20 +1828,17 @@ class UserView extends Component
 
 
 				
-			h Slide,
-				auto: yes
-				className: 'lists-inner'
-				vertical: yes
-				h Grid,
-					show_loader: no
-					w: 8
-					className: 'lists-grid'
-					fixed : false
-					auto: true
-					animate: !g.isSafari && true || false
-					max_grid_height_beta : 2
-					max_reached: true
-					friend_items
+			
+			h Grid,
+				show_loader: no
+				w: 8
+				className: 'lists-grid'
+				fixed : false
+				auto: true
+				animate: !g.isSafari && true || false
+				max_grid_height_beta : 2
+				max_reached: true
+				friend_items
 
 
 MAX_NAME_LENGTH = 12
@@ -2103,7 +1909,7 @@ class UserSettings extends Component
 				center: yes
 				vertical: yes
 				user
-			h SquareButton,
+			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: no
 				disabled: !@state.name || @state.name == @props.user.name || @state.name.length > MAX_NAME_LENGTH
@@ -2132,18 +1938,16 @@ class MainView extends Component
 		@setState
 			show_more: no
 		actions.logout()
+	componentDidMount: ()->
+		window.addEventListener 'resize',()=>
+			@forceUpdate()
 
 
 	render: (props,state)=>
 
-
-
-
 		if props.view.main_view == 'home'
 			main_top = h HomeView,props
-		
-
-		if props.group
+		else if props.group
 			main_top = h GroupView,props
 		
 
@@ -2166,7 +1970,7 @@ class MainView extends Component
 		if props.view.main_view == 'group'
 			menu = h Menu,
 				left_options: [
-					h SquareButton,
+					h SlideButton,
 						className: 'btn'
 						sClass: 'blue'
 						pClass: 'blue-inv'
@@ -2177,7 +1981,7 @@ class MainView extends Component
 						active: props.view.modal_content == 'addTodo' || false
 						onClick: ()=>
 							actions.setModal('addTodo')
-					h SquareButton,
+					h SlideButton,
 						onClick: ()=>
 							actions.setModal('linkGroup')
 						sClass: ''
@@ -2188,7 +1992,7 @@ class MainView extends Component
 						# reverse: yes
 						i: 'link'
 						active: props.view.modal_content == 'linkGroup'
-					h SquareButton,
+					h SlideButton,
 						onClick: ()=>
 							actions.setModal('editGroup')
 						sClass: ''
@@ -2215,7 +2019,7 @@ class MainView extends Component
 		else if props.view.main_view == 'user'
 			menu = h Menu,
 				left_options: [
-						h SquareButton,
+						h SlideButton,
 							onClick: ()=>
 								actions.setModal('newGroup')
 							sClass: 'blue'
@@ -2225,7 +2029,7 @@ class MainView extends Component
 							i:'playlist_add'
 							active: props.view.modal_content == 'newGroup'
 					,
-						h SquareButton,
+						h SlideButton,
 							i: 'person_add'
 							sClass: 'blue'
 							pClass: 'blue-inv'
@@ -2240,7 +2044,8 @@ class MainView extends Component
 				state: props
 
 
-		
+
+			
 		h Slide,
 			className: 'root-view'
 			vertical: yes

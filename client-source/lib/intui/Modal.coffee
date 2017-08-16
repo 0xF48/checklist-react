@@ -103,7 +103,7 @@ class Modal extends Component
 
 	componentDidUpdate:(props,state)->
 		if @props.show == true && @props.show != props.show
-			@show()
+			setTimeout @show,0
 	
 	componentDidMount: (props,state)->
 		if @props.show == true

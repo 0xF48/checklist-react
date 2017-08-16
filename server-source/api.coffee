@@ -214,7 +214,7 @@ app
 	if !req.query.name
 		return res.json getState(req,search_users:[])
 
-	regex = new RegExp('^'+req.query.name, 'g')
+	regex = new RegExp('^'+req.query.name, 'gi')
 	User.find
 		name: regex
 	.select('_id name img')
