@@ -1,6 +1,6 @@
 
 # Input Text
-import Input from './Input.coffee'
+Input = require './Input.coffee'
 {h,Component} = require 'preact'
 cn = require 'classnames'
 
@@ -25,12 +25,7 @@ class InputText extends Component
 		if e.keyCode == 13
 			@props.onEnter && @props.onEnter(e)
 		@props.onKeyDown && @props.onKeyDown(e)
-	# onChange: (e)=>
-	# 	# console.log 'onchange'
-	# 	@setState
-	# 		initial_value: !@props.locked && null
-	# 		value: e.target.value
-		# @props.onChange && @props.onChange(e)
+
 	componentWillUpdate: (props,state)=>
 		if @props.value != props.value
 			@setState
@@ -67,4 +62,4 @@ class InputText extends Component
 			h 'input', props
 
 
-export default InputText
+module.exports = InputText

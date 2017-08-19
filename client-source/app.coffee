@@ -17,21 +17,21 @@ window.g =
 	small_width: window.innerWidth < 500
 	origin: 'http://localhost:8787'
 
-# Alt = require('alt');
-# window.alt = new Alt();
-# window.actions = require './actions.coffee'
-# window.store = 	require './store.coffee'
+Alt = require('alt');
+window.alt = new Alt();
+window.actions = require './actions.coffee'
+window.store = 	require './store.coffee'
 
 
-# View = require './view.coffee'
-# render h(View,{}),document.getElementById('checki')
+View = require './view.coffee'
+render h(View,{}),document.getElementById('checki')
 
 
 
 	
-import Test from './slide_test.coffee'
+# import Test from './slide_test.coffee'
 
-render h(Test,{}),document.getElementById('checki')
+# render h(Test,{}),document.getElementById('checki')
 
 
 

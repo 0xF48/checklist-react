@@ -1,6 +1,7 @@
-import {h as el,Component} from 'preact'
-require './style/Grid.scss'
 
+{h,Component} = require 'preact'
+require './style/Grid.scss'
+el = h
 
 class GridItem extends Component
 	constructor: (props)->
@@ -16,58 +17,37 @@ class GridItem extends Component
 	componentWillMount: ()->
 		@state_show = false
 
-	# componentWillRecieveProps: (props)->
-	# 	console.log 'WILL RECIVE PROPS'
-	# 	if props.show != @props.show
-	# 		@show()
 
 
 	show: (set,delay)->
-		# log 'SHOW',@_item
-		# this.hidden = false
 
 		if @hide_t
 			clearTimeout(@hide_t)
 			@hide_t = null
 
-		# @state.show = true
-
-		# if set
-		# 	@_item.style.display = 'block';
-		# 	@_item.style.transition = '';
-		# 	@_item.style.transform = '';
-		# 	@hide_t = setTimeout ()=>
-		# 		@_item.style.transition = 'transform ' + @props.ease_dur + 's cubic-bezier(.29,.3,.08,1)';
-		# 	,0
-		# else
-			
-
 		@hide_t = setTimeout ()=>
 			if !@_item
 				return
 
-
 			@state.transition = 'transform ' + @props.ease_dur + 's cubic-bezier(.29,.3,.08,1)'
 			@state.transform = 'matrix3d(1,0,0.00,0,0.00,1,0.00,0,0,0,1,0,0,0,0,1)'
-			# @setState()
 			@_item?.style.transition = @state.transition
 			@_item?.style.transform = @state.transform
 
 		,delay
 		@props.onShow?()
 
-	# componentDidUpdate: ()->
-
-
 
 	render: ()->
 
 			
-		if @state_show != @props.show
-			# console.log 'SHOW',@props.show,@props.children[0].children[0]
-			@state_show = @props.show
+		if @state.show != @props.show
+			console.log 'SHOW',@props.show,@state.show
+			@state.show = @props.show
+			@setState()
 
-			if @state_show
+			if @state.show == true
+
 
 				if @props.w > @props.h
 					@state.transform = 'matrix3d(0.6,0,0.00,'+(-0.001+Math.random()*0.002)+',0.00,0,1.00,-0.003,0,-1,0,0,0,0,0,1)'
@@ -103,6 +83,7 @@ class GridItem extends Component
 GridItem.defaultProps = 
 	w: 1
 	h: 1
+	show: yes
 	ease_dur: 0.4
 
 
@@ -186,10 +167,6 @@ class Grid extends Component
 			arr.push row
 
 	getSpot: (w,h,arr)->
-		# log arr
-		# if cc > C
-		# 	throw 'overflow'
-		# cc++
 		min_r_i = 0 #min row index
 		found = false #found spot
 		row_filled = true #row filled 
@@ -199,19 +176,17 @@ class Grid extends Component
 		if (arr.length - @state.min_row_index) < h
 			@addSpots(h,arr)
 
-		# console.log arr,@state.min_row_index
+		
 
 		for row in [@state.min_row_index...arr.length]
 			for spot,col in arr[row]
 				if spot > -1
 					row_filled = false #row is filled
-				else
-					# console.log row,col,w,h,arr
-					# console.log @checkSpot(row,col,w,h,arr)
-					if @checkSpot(row,col,w,h,arr)
-						return [row,col]
+				else if @checkSpot(row,col,w,h,arr)
+					return [row,col]
 			if row_filled
 				@state.min_row_index = row
+
 
 		@addSpots(h,arr)
 		@getSpot(w,h,arr)
@@ -229,7 +204,8 @@ class Grid extends Component
 	addChild: (child,index)->
 		w = child.attributes.w
 		h = child.attributes.h
-		child.key = index
+		# child. = index
+		# log 'add child',@state.child_props
 		[row,col] = @getSpot(w,h,@state.index_array)
 		# log row,col
 		@state.child_props[index] = 
@@ -280,9 +256,6 @@ class Grid extends Component
 			row_bot = arr.length
 
 
-		# log @_outer.clientHeight
-
-
 		if @state.row_h == row_h && row_n == @state.row_n && row_top == @state.row_top && row_bot == @state.row_bot
 			return @state.display_children
 
@@ -292,12 +265,6 @@ class Grid extends Component
 		@state.row_top = row_top
 		@state.row_bot = row_bot
 		@state.offset_update = true
-
-		# log 'offset ROW_H:', row_h
-		# log 'offset ROW_N:', row_n
-		# log 'offset ROW_TOP:', row_top
-		# log 'offset ROW_BOT:', row_bot
-
 
 
 		display_children = []
@@ -311,10 +278,10 @@ class Grid extends Component
 					else
 						display_children.unshift(children[spot])
 
-		# display_children = display_children.reverse()
 		return display_children
 
 	updateGrid: (oldProps,newProps)->
+		console.log oldProps,newProps
 		if oldProps.children.length != newProps.children.length
 			@state.display_children = @offsetChildren(@setChildren(newProps.children))
 
@@ -345,7 +312,6 @@ class Grid extends Component
 	componentDidMount: ()->
 		@state.display_children = @offsetChildren(@setChildren(@props.children))
 		@render()
-
 		@_outer.addEventListener 'scroll',@onScroll
 
 	updateScroll: ()->
@@ -382,13 +348,18 @@ class Grid extends Component
 		
 	render: ()=>
 		# console.log @state.display_children
-
+		# log @state.display_children
+		@state.display_children = @state.display_children.map (c)=>
+			if !c
+				return null
+			@props.children[c.attributes.i]
 
 		for c,i in @state.display_children
-			if !c
+			if !c? || !@state.child_props.length
 				continue
-			c.attributes.r = @state.child_props[c.attributes.index].r
-			c.attributes.c = @state.child_props[c.attributes.index].c
+			# log @state.child_props
+			c.attributes.r = @state.child_props[c.attributes.i].r
+			c.attributes.c = @state.child_props[c.attributes.i].c
 			c.attributes.show = @childVisible(c)
 			# log 'VISIBLE',c.attributes.show
 			
@@ -425,8 +396,8 @@ Grid.defaultProps =
 	children: []
 	pre_children: []
 	post_children: []
-	offset_height_factor: 2
+	offset_height_factor: 1.5
 	w: 4
 
-export {GridItem,Grid}
+module.exports = {GridItem,Grid}
 # module.exports = {Grid,GridItem} 

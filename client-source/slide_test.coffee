@@ -10,7 +10,7 @@ class Test extends Component
 		@state = 
 			pos1: 1
 			pos2: 1
-			grid_items: [0..1000].map @gridItem
+			grid_items: [0..3].map @gridItem
 
 	slide1: ()=>
 		@setState
@@ -25,7 +25,7 @@ class Test extends Component
 			key: index
 			w: 1+Math.round(Math.random()*1)
 			h: 1+Math.round(Math.random()*1)
-			index: index
+			i: index
 			h 'div',
 				className: 'b2 center'
 				style: 

@@ -1,7 +1,7 @@
 {h,Component} = require 'preact'
 
 Slide = require 'intui/Slide.coffee'
-Overlay = require 'intui/Overlay.js'
+Overlay = require 'intui/Overlay.coffee'
 Button = require 'intui/extras/Button.coffee'
 InputFile = require 'intui/InputFile.coffee'
 InputText = require 'intui/InputText.coffee'
@@ -9,9 +9,10 @@ InputTextArea = require 'intui/InputTextArea.coffee'
 Modal = require 'intui/Modal.coffee'
 {Grid,GridItem} = require 'intui/Grid.coffee'
 
+
 SlideButton = require 'intui/extras/SlideButton.coffee'
 
-
+# console.log Button
 monthNames = ["January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December"]
 Viewer = require './lib/Viewer.coffee'
 
@@ -1061,7 +1062,7 @@ class PinsView extends Component
 
 
 		# log pins
-		pins = pins.map (pin)=>
+		pins = pins.map (pin,i)=>
 			if !pin
 				return null
 			pin.onClick = ()->
@@ -1069,7 +1070,7 @@ class PinsView extends Component
 					pins: pins
 					pin: pin
 			h GridItem,
-				w: pin.w,h: pin.h,key: pin.id,
+				i:i, w: pin.w,h: pin.h,key: pin.id,
 					h Pin,pin
 		
 		reset_grid = @state.reset_grid
@@ -1764,30 +1765,48 @@ class UserView extends Component
 			className: 'title pad-0-0'
 			height: g.dim
 			title
-
-	render: (props,state)=>
-		user = props.user
-		group_items = props.user.groups.map (g)->
+	makeGroups: (props)=>
+		console.log 'make groups'
+		group_items = @props.user.groups.map (g,i)->
 			h GridItem,
-				w: 2,h: 1,key: g._id,
+				i:i, w: 2,h: 1,key: g._id,
 					h UserViewGroupItem,g
-
 		group_items.push h GridItem,
 			w: 1
 			h: 1
 			key: 'add'
+			i: group_items.length
 			h Button,
 				onClick: ()->
 					actions.setModal('newGroup')
 				className: 'add-btn'
 				i: 'playlist_add'
+
+		return group_items
+
+	# componentWillRecieveProps: (props)->
+	# 	if @props.user.groups.length != props.user.groups.length
+	# 		@makeGroups(props)
+	
+	# componentWillMount: ()->
+	# 	@makeGroups(@props)
+
+
+
+	render: (props,state)=>
+		user = props.user
+
+		group_items = 
 		
-		friend_items = props.user.friends.map (g)->
+
+
+		friend_items = props.user.friends.map (g,i)->
 			h GridItem,
-				w: 2,h: 1,key: g._id,
+				i:i,w: 2,h: 1,key: g._id,
 					h Item,g
 
 		friend_items.push h GridItem,
+			i: friend_items.length
 			w: 1
 			h: 1
 			key: 'add'
@@ -1810,16 +1829,10 @@ class UserView extends Component
 			@title 'my groups:'
 		
 			h Grid,
-				show_loader: no
-				w: g.small_width && 4 || 6
+				w: 6
 				className: 'lists-grid'
-				fixed : false
-				toggle_reset: yes
-				auto: true
-				animate: !g.isSafari && true || false
-				max_grid_height_beta : 2
 				max_reached: true
-				group_items
+				@makeGroups()
 
 			@title 'my friends:'
 
@@ -1830,10 +1843,6 @@ class UserView extends Component
 				show_loader: no
 				w: 8
 				className: 'lists-grid'
-				fixed : false
-				auto: true
-				animate: !g.isSafari && true || false
-				max_grid_height_beta : 2
 				max_reached: true
 				friend_items
 
@@ -1941,6 +1950,7 @@ class MainView extends Component
 
 
 	render: (props,state)=>
+		# return h Slide,{},'asd'
 
 		if props.view.main_view == 'home'
 			main_top = h HomeView,props

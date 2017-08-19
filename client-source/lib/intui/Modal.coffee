@@ -1,6 +1,6 @@
 require './style/Modal.scss'
 {h,Component} = require 'preact'
-Overlay = require './Overlay.js'
+Overlay = require './Overlay.coffee'
 cn = require 'classnames'
 
 class Modal extends Component
@@ -36,8 +36,8 @@ class Modal extends Component
 		# console.log rect
 		@rect = rect
 		ctx = @_canvas.getContext('2d')
-		@_canvas.width = @_overlay.refs.overlay.clientWidth
-		@_canvas.height = @_overlay.refs.overlay.clientHeight
+		@_canvas.width = @_overlay.clientWidth
+		@_canvas.height = @_overlay.clientHeight
 		ctx.fillStyle = @props.backColor
 
 		@pos = [
@@ -62,8 +62,8 @@ class Modal extends Component
 		# console.log rect
 		@rect = rect
 		ctx = @_canvas.getContext('2d')
-		@_canvas.width = @_overlay.refs.overlay.clientWidth
-		@_canvas.height = @_overlay.refs.overlay.clientHeight
+		@_canvas.width = @_overlay._overlay.clientWidth
+		@_canvas.height = @_overlay._overlay.clientHeight
 		ctx.fillStyle = @props.backColor
 
 		@perim = [
@@ -148,5 +148,5 @@ class Modal extends Component
 				@props.children
 
 
-export default Modal
+module.exports = Modal
 

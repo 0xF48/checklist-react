@@ -69,6 +69,7 @@ updateIndices = (group)->
 
 
 updateCount = (list)->
+	# log list
 	list.total_count = list.state.todos.length
 	list.done_count = 0
 	for todo in list.state.todos
@@ -80,8 +81,10 @@ updateCount = (list)->
 # console.log window.state
 
 window.state = window.server_state || {}
-for val,key of window.server_state
-	Object.assign window.initial_state[key],val
+for key,val of window.server_state
+	if !val
+		continue
+	window.initial_state[key] = Object.assign {},window.initial_state[key],val
 	
 # window.initial_state = window.state
 

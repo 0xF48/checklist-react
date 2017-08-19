@@ -18,4 +18,4 @@ class Input extends Component
 		,children
 
 
-export default Input
+module.exports = Input

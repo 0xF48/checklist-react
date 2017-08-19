@@ -63,4 +63,4 @@ class InputTextArea extends Component
 			label
 			area
 
-export default InputTextArea
+module.exports = InputTextArea

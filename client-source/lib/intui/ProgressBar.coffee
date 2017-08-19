@@ -23,4 +23,4 @@ class ProgressBar extends Component
 ProgressBar.defaultProps = 
 	ratio:0
 
-export default ProgressBar
+module.exports =  ProgressBar

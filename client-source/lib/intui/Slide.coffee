@@ -334,7 +334,7 @@ Slide.defaultProps=
 
 
 
-export default Slide
+module.exports = Slide
 
 
 
