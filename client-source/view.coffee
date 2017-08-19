@@ -7,7 +7,7 @@ InputFile = require 'intui/InputFile.coffee'
 InputText = require 'intui/InputText.coffee'
 InputTextArea = require 'intui/InputTextArea.coffee'
 Modal = require 'intui/Modal.coffee'
-{Grid,GridItem,GridMixin} = require 'intui/TetrisGrid.js'
+{Grid,GridItem} = require 'intui/Grid.coffee'
 
 SlideButton = require 'intui/extras/SlideButton.coffee'
 
@@ -18,10 +18,7 @@ Viewer = require './lib/Viewer.coffee'
 
 cn = require 'classnames'
 
-isset = (val)->
-	if val == null || val == undefined || val == NaN
-		return false
-	return true
+
 
 sortUsers = (users)->
 	# gstate = store.state

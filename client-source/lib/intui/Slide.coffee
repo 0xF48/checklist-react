@@ -38,7 +38,6 @@ class Slide extends Component
 		dim: if @props.vert then @state.width else @state.height
 
 	setStateDim: ()->
-		# console.log @_outer.clientWidth,@_outer.clientHeight
 		@state.width = @_outer.clientWidth
 		@state.height = @_outer.clientHeight
 
@@ -62,13 +61,9 @@ class Slide extends Component
 	componentWillReceiveProps: (props)->
 		#legacy props support
 		@legacyProps(props)
-		# console.log props.vert
 
-	# shouldComponentUpdate: ()->
-	# 	console.log 'should update?'
 
 	componentDidUpdate: (p_props)->
-
 		@updateSlidePos(@checkSlideUpdate(p_props))
 
 	checkSlideUpdate: (p_props)->
@@ -154,14 +149,14 @@ class Slide extends Component
 		y = 0
 		
 		cc = @_inner.children[index]
-		# console.log index,@_inner.children
+		
 
 		if @props.vert
 			y = cc.offsetTop
 		else
 			x = cc.offsetLeft
 
-		# console.log @props.vert,@props.vertical
+		
 		if isset @props.index_offset
 			if @props.vert
 				y += @props.index_offset
@@ -169,20 +164,20 @@ class Slide extends Component
 				x += @props.index_offset
 		if isset @props.index_offset_beta
 			if @props.vert
-				y += @rect.height/100*@props.index_offset_beta
+				y += @state.height/100*@props.index_offset_beta
 			else
-				x += @rect.width/100*@props.index_offset_beta
+				x += @state.width/100*@props.index_offset_beta
 
 		last_child = @_inner.children[@_inner.children.length-1]
 		
-		# console.log last_child.offsetLeft,last_child.clientWidth
+		
 
 		max_y = Math.abs((last_child.offsetTop + last_child.clientHeight)-@state.height)
 		max_x = Math.abs((last_child.offsetLeft + last_child.clientWidth)-@state.width )
-		# console.log max_x,@_inner.clientWidth,@state.width
+		
 
 
-		# console.log 'GET INDEX XY',@_inner.clientHeight,@state.height
+		
 
 
 		if x > max_x
@@ -190,16 +185,17 @@ class Slide extends Component
 		if y > max_y
 			y = max_y
 
+
 		x: x
 		y: y
 
-	setIndex: ()->
-		this.setXY(@getIndexXY(@props.pos))
 
 	componentDidMount: ()=>
 		if @props.slide && @props.pos > 0
-			@setStateDim()
-			@setIndex()
+			setTimeout ()=>
+				@setStateDim()
+				@setXY @getIndexXY(@props.pos)
+			,0
 
 	getBeta: ()=>
 		beta = @props.beta + '%'
@@ -277,15 +273,12 @@ class Slide extends Component
 	# render component
 	render: =>
 
-		# console.log 'render slide'
-		# console.log @props.dim
 
 		class_center = @props.center && '-i-s-center' || null
 		class_vert = @props.vert && '-i-s-vertical' || null
 		class_fixed = ( (@props.dim || @props.w || @props.h) && '-i-s-fixed') || null
 		class_reverse = @props.reverse && '-i-s-reverse' || null
 
-		# console.log @props
 
 		if @props.slide
 			outer_class = cn '-i-s-outer',@props.class,class_fixed
@@ -341,9 +334,7 @@ Slide.defaultProps=
 
 
 
-
-module.exports = Slide
-
+export default Slide
 
 
 

@@ -1,10 +1,10 @@
 #Input base class
 
 # Button = require './Button.coffee'
-{h,Component} = require 'preact'
+import {h,Component} from 'preact'
 cn = require 'classnames'
-Button = require './Button.coffee'
-Slide = require '../Slide.coffee'
+import Button from './Button.coffee'
+import Slide from '../Slide.coffee'
 require './style/SlideButton.scss'
 
 class SlideButton extends Component
@@ -19,6 +19,7 @@ class SlideButton extends Component
 			hover: no
 			start_pos: @getStartPos(props)
 			pos: @getStartPos(props)
+		
 
 	getStartPos: (props)->
 		pos = 0
@@ -122,4 +123,5 @@ SlideButton.defaultProps=
 	active_index_offset: 0
 	index_offset: 5
 
-module.exports = SlideButton
+
+export default SlideButton

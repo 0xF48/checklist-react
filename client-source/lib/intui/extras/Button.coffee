@@ -1,5 +1,5 @@
 require './style/Button.scss';
-Slide = require '../Slide.coffee'
+import Slide from '../Slide.coffee'
 #Input base class
 
 {h,Component} = require 'preact'
@@ -26,4 +26,4 @@ class Button extends Component
 			i
 			label
 
-module.exports = Button
+export default Button

@@ -1,15 +1,16 @@
-Slide = require 'intui/Slide.coffee'
-SlideButton = require 'intui/extras/SlideButton.coffee'
-{h,Component} = require 'preact'
-
+import Slide from 'intui/Slide.coffee'
+import SlideButton from 'intui/extras/SlideButton.coffee'
+import {h,Component} from 'preact'
+{Grid,GridItem} = require 'intui/Grid.coffee'
 
 DIM = 50
 class Test extends Component
 	constructor: (props)->
 		super(props)
 		@state = 
-			pos1: 0
-			pos2: 0
+			pos1: 1
+			pos2: 1
+			grid_items: [0..50].map @gridItem
 
 	slide1: ()=>
 		@setState
@@ -19,7 +20,27 @@ class Test extends Component
 		@setState
 			pos2: 1 - @state.pos2
 
+	gridItem: (index)=>
+		h GridItem,
+			key: index
+			w: 1+Math.round(Math.random()*1)
+			h: 1+Math.round(Math.random()*1)
+			index: index
+			h 'div',
+				className: 'b3 center'
+				style: 
+					width: 'calc(100% - 10px)'
+					height: 'calc(100% - 10px)'
+					margin: '5px'
+					fontSize: '22px'
+				'i'+index
+
+	componentDidMount: ()->
+		window.addEventListener 'resize',()=>
+			@forceUpdate()
+		
 	render: =>
+	
 		h Slide,
 			vert: yes
 			h Slide,
@@ -28,10 +49,10 @@ class Test extends Component
 				h SlideButton,
 					top:
 						class: 'b0'
-						label: 'slide b'
+						label: 'slide 1'
 					bot:
 						class: 'b3'
-						label: 'slide a'
+						label: 'slide 2'
 					dim: DIM*2
 					vert: yes
 					active: @state.pos1
@@ -39,10 +60,10 @@ class Test extends Component
 				h SlideButton,
 					top:
 						class: 'b0'
-						label: 'slide 2'
+						label: 'slide a'
 					bot:
 						class: 'b3'
-						label: 'slide 1'
+						label: 'slide b'
 					dim: DIM*2
 					vert: yes
 					active: @state.pos2
@@ -61,14 +82,17 @@ class Test extends Component
 					pos: @state.pos2
 					oclass: 'b0'
 					h Slide,
-						class: 'b3'
+						class: 'b2'
 						center: yes
 						'slide 1'
 					h Slide,
-						center: yes
-						'slide 2'
+						class: 'b0'
+						h Grid, 
+							w: 5
+							@state.grid_items
 
 
-module.exports = Test
+
+export default Test
 
 				

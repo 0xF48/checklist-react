@@ -28,8 +28,8 @@ var cfg = {
 	resolve: {
 		"alias": {
 			"intui" : __dirname+"/client-source/lib/intui",
-			"react" : "preact-compat",
-			"react-dom": "preact-compat",
+			// "react" : "preact-compat",
+			// "react-dom": "preact-compat",
 			"re": "preact",
 		}
 	},

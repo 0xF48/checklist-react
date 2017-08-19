@@ -148,5 +148,5 @@ class Modal extends Component
 				@props.children
 
 
-module.exports = Modal
+export default Modal
 

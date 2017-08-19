@@ -1,6 +1,6 @@
 actions = require './actions.coffee'
 uuid = require 'uuid/v4'
-_merge = require 'lodash/merge'
+
 window.initial_state = 
 	error: null
 	group: null
@@ -80,7 +80,9 @@ updateCount = (list)->
 # console.log window.state
 
 window.state = window.server_state || {}
-_merge window.initial_state,window.server_state
+for val,key of window.server_state
+	Object.assign window.initial_state[key],val
+	
 # window.initial_state = window.state
 
 

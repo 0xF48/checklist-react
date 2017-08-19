@@ -1,6 +1,6 @@
 
 # Input Text
-Input = require './Input.coffee'
+import Input from './Input.coffee'
 {h,Component} = require 'preact'
 cn = require 'classnames'
 
@@ -67,4 +67,4 @@ class InputText extends Component
 			h 'input', props
 
 
-module.exports = InputText
+export default InputText

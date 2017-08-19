@@ -1,6 +1,6 @@
 # require './lib/polyfills.js'
 require './lib/helpers.js'
-{h,render} = require 'preact'
+import {h,render} from 'preact'
 # require 'preact/devtools'
 
 window.addEventListener 'mousemove',(e)->
@@ -17,20 +17,21 @@ window.g =
 	small_width: window.innerWidth < 500
 	origin: 'http://localhost:8787'
 
-Alt = require('alt');
-window.alt = new Alt();
-window.actions = require './actions.coffee'
-window.store = 	require './store.coffee'
+# Alt = require('alt');
+# window.alt = new Alt();
+# window.actions = require './actions.coffee'
+# window.store = 	require './store.coffee'
 
 
-View = require './view.coffee'
-render h(View,{}),document.getElementById('checki')
+# View = require './view.coffee'
+# render h(View,{}),document.getElementById('checki')
 
 
 
 	
-# Test = require './slide_test.coffee'
-# render h(Test,{}),document.getElementById('checki')
+import Test from './slide_test.coffee'
+
+render h(Test,{}),document.getElementById('checki')
 
 
 
