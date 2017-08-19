@@ -10,7 +10,7 @@ class Test extends Component
 		@state = 
 			pos1: 1
 			pos2: 1
-			grid_items: [0..50].map @gridItem
+			grid_items: [0..1000].map @gridItem
 
 	slide1: ()=>
 		@setState
@@ -27,7 +27,7 @@ class Test extends Component
 			h: 1+Math.round(Math.random()*1)
 			index: index
 			h 'div',
-				className: 'b3 center'
+				className: 'b2 center'
 				style: 
 					width: 'calc(100% - 10px)'
 					height: 'calc(100% - 10px)'
@@ -49,10 +49,10 @@ class Test extends Component
 				h SlideButton,
 					top:
 						class: 'b0'
-						label: 'slide 1'
+						label: 'slide a'
 					bot:
 						class: 'b3'
-						label: 'slide 2'
+						label: 'slide b'
 					dim: DIM*2
 					vert: yes
 					active: @state.pos1
@@ -63,7 +63,7 @@ class Test extends Component
 						label: 'slide a'
 					bot:
 						class: 'b3'
-						label: 'slide b'
+						label: 'grid'
 					dim: DIM*2
 					vert: yes
 					active: @state.pos2
@@ -82,13 +82,13 @@ class Test extends Component
 					pos: @state.pos2
 					oclass: 'b0'
 					h Slide,
-						class: 'b2'
+						class: 'b3'
 						center: yes
-						'slide 1'
+						'slide a'
 					h Slide,
 						class: 'b0'
 						h Grid, 
-							w: 5
+							w: 8
 							@state.grid_items
 
 

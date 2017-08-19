@@ -7,20 +7,90 @@ class GridItem extends Component
 		super(props)
 		@state = 
 			hidden: false
+			show: false
+		@state_show = false
 		if props.w == 0 || props.h == 0
 			throw new Error 'invalid grid item w/h '+w+','+h
 
-	componentDidMount: ()->
+
+	componentWillMount: ()->
+		@state_show = false
+
+	# componentWillRecieveProps: (props)->
+	# 	console.log 'WILL RECIVE PROPS'
+	# 	if props.show != @props.show
+	# 		@show()
+
+
+	show: (set,delay)->
+		# log 'SHOW',@_item
+		# this.hidden = false
+
+		if @hide_t
+			clearTimeout(@hide_t)
+			@hide_t = null
+
+		# @state.show = true
+
+		# if set
+		# 	@_item.style.display = 'block';
+		# 	@_item.style.transition = '';
+		# 	@_item.style.transform = '';
+		# 	@hide_t = setTimeout ()=>
+		# 		@_item.style.transition = 'transform ' + @props.ease_dur + 's cubic-bezier(.29,.3,.08,1)';
+		# 	,0
+		# else
+			
+
+		@hide_t = setTimeout ()=>
+			if !@_item
+				return
+
+
+			@state.transition = 'transform ' + @props.ease_dur + 's cubic-bezier(.29,.3,.08,1)'
+			@state.transform = 'matrix3d(1,0,0.00,0,0.00,1,0.00,0,0,0,1,0,0,0,0,1)'
+			# @setState()
+			@_item?.style.transition = @state.transition
+			@_item?.style.transform = @state.transform
+
+		,delay
+		@props.onShow?()
+
+	# componentDidUpdate: ()->
+
 
 
 	render: ()->
+
+			
+		if @state_show != @props.show
+			# console.log 'SHOW',@props.show,@props.children[0].children[0]
+			@state_show = @props.show
+
+			if @state_show
+
+				if @props.w > @props.h
+					@state.transform = 'matrix3d(0.6,0,0.00,'+(-0.001+Math.random()*0.002)+',0.00,0,1.00,-0.003,0,-1,0,0,0,0,0,1)'
+				else
+					@state.transform = 'matrix3d(0,0,1,'+(-0.001+Math.random()*0.002)+',0.00,0.6,0.00,0.001,-1,0,0,0,0,0,0,1)'
+					
+				@state.transition = ''
+
+				@show(false,50+Math.random()*100)
+
+		# console.log @state.transition,@state_show,@props.children[0].children[0]
+
 		d = this.context.dim
-		# console.log @props.r,@props.c,d,@props.children[0].children[0],@props.w,@props.h
+
+
 		el 'div',
-			className: '-i-grid-item-outer '+(@props.class||@props.className||@props.outerClassName)
+			className: '-i-grid-item-outer '+(@props.class||@props.className||@props.outerClassName||'')
 			ref: (e)=>
 				@_item = e
 			style:
+				visibility: !@props.show && 'hidden' || 'initial'
+				transition: @state.transition
+				transform: @state.transform
 				left: (this.props.c * d) + 'px'
 				top: (this.props.r * d) + 'px'
 				height: (this.props.h * d) + 'px'
@@ -33,9 +103,9 @@ class GridItem extends Component
 GridItem.defaultProps = 
 	w: 1
 	h: 1
+	ease_dur: 0.4
 
-C = 100
-cc = 0
+
 
 
 class Grid extends Component
@@ -49,7 +119,8 @@ class Grid extends Component
 			inner_width: 0
 
 	getChildContext: ()=>
-		console.log 'get dim'
+		# console.log 'get dim'
+		animate: @props.animate
 		dim: @getDim()
 
 	componentWillRecieveProps: (props)->
@@ -158,6 +229,7 @@ class Grid extends Component
 	addChild: (child,index)->
 		w = child.attributes.w
 		h = child.attributes.h
+		child.key = index
 		[row,col] = @getSpot(w,h,@state.index_array)
 		# log row,col
 		@state.child_props[index] = 
@@ -211,10 +283,6 @@ class Grid extends Component
 		# log @_outer.clientHeight
 
 
-
-
-
-
 		if @state.row_h == row_h && row_n == @state.row_n && row_top == @state.row_top && row_bot == @state.row_bot
 			return @state.display_children
 
@@ -225,10 +293,10 @@ class Grid extends Component
 		@state.row_bot = row_bot
 		@state.offset_update = true
 
-		log 'offset ROW_H:', row_h
-		log 'offset ROW_N:', row_n
-		log 'offset ROW_TOP:', row_top
-		log 'offset ROW_BOT:', row_bot
+		# log 'offset ROW_H:', row_h
+		# log 'offset ROW_N:', row_n
+		# log 'offset ROW_TOP:', row_top
+		# log 'offset ROW_BOT:', row_bot
 
 
 
@@ -238,9 +306,12 @@ class Grid extends Component
 			for spot in arr[row]
 				if !(added[spot]?)
 					added[spot] = true
-					display_children[display_children.length] = children[spot]
+					if @state.scroll_up
+						display_children[display_children.length] = children[spot]
+					else
+						display_children.unshift(children[spot])
 
-		
+		# display_children = display_children.reverse()
 		return display_children
 
 	updateGrid: (oldProps,newProps)->
@@ -256,9 +327,20 @@ class Grid extends Component
 
 
 	onScroll: ()=>
+		if @state.last_scroll > @_outer.scrollTop
+			@state.scroll_up = true
+		else
+			@state.scroll_up = false
+
+		@state.last_scroll = @_outer.scrollTop
+		# @s = @s || 0
+		# @s++
 		@state.display_children = @offsetChildren(@props.children)
 		if @state.offset_update
 			@forceUpdate()
+		# else if @s % 10 == 0
+		# 	@forceUpdate()
+
 
 	componentDidMount: ()->
 		@state.display_children = @offsetChildren(@setChildren(@props.children))
@@ -277,16 +359,39 @@ class Grid extends Component
 			@state.display_children = @offsetChildren(@props.children)
 			@state.inner_width = @_inner.clientWidth
 
+	childVisible: (c)->
+		d = @getDim()
+		min = @_outer.scrollTop - 100
+		max = @_outer.scrollTop + @_outer.clientHeight + 100
+		top = c.attributes.r * d
+		bot = top + c.attributes.h * d
 
+
+		if @_outer?
+			if min <= bot && top <= max
+				return true
+			else
+				return false
+				
+
+		return false
+		
+		
 
 
 		
 	render: ()=>
 		# console.log @state.display_children
 
+
 		for c,i in @state.display_children
-			c?.attributes.r = @state.child_props[c.attributes.index].r
-			c?.attributes.c = @state.child_props[c.attributes.index].c
+			if !c
+				continue
+			c.attributes.r = @state.child_props[c.attributes.index].r
+			c.attributes.c = @state.child_props[c.attributes.index].c
+			c.attributes.show = @childVisible(c)
+			# log 'VISIBLE',c.attributes.show
+			
 		# console.log @state
 		if @props.show_loader
 			stop_loader  = @props.max_reached && @max_scroll_pos >= @total_max_pos && '-i-loader-stop' || ''
@@ -315,6 +420,7 @@ class Grid extends Component
 
 
 Grid.defaultProps = 
+	animate: yes
 	append_children: []
 	children: []
 	pre_children: []
