@@ -42,7 +42,7 @@ class GridItem extends Component
 
 			
 		if @state.show != @props.show
-			console.log 'SHOW',@props.show,@state.show
+			# console.log 'SHOW',@props.show,@state.show
 			@state.show = @props.show
 			@setState()
 
@@ -61,7 +61,7 @@ class GridItem extends Component
 		# console.log @state.transition,@state_show,@props.children[0].children[0]
 
 		d = this.context.dim
-
+		# console.log d
 
 		el 'div',
 			className: '-i-grid-item-outer '+(@props.class||@props.className||@props.outerClassName||'')
@@ -71,10 +71,10 @@ class GridItem extends Component
 				visibility: !@props.show && 'hidden' || 'initial'
 				transition: @state.transition
 				transform: @state.transform
-				left: (this.props.c * d) + 'px'
+				left: (this.props.c/this.context.w*100) + '%'
 				top: (this.props.r * d) + 'px'
 				height: (this.props.h * d) + 'px'
-				width: (this.props.w * d) + 'px'
+				width: (this.props.w/this.context.w*100) + '%'
 			@props.children
 
 
@@ -102,6 +102,7 @@ class Grid extends Component
 	getChildContext: ()=>
 		# console.log 'get dim'
 		animate: @props.animate
+		w: @props.w
 		dim: @getDim()
 
 	componentWillRecieveProps: (props)->
@@ -114,20 +115,15 @@ class Grid extends Component
 		if props.outerClass
 			props.oclass = props.outerClass
 		
-		console.log 'UPDATE GRID'
-		@updateGrid(@props,newProps)
+		# console.log 'UPDATE GRID'
+		
 
 	componentWillUnmount: ()->
-
-		@_outer.removeEventListener('mousewheel', this.onMouseWheel);
+		# @_outer.removeEventListener('DOMMouseScroll', this.onMouseWheel);
+		# @_outer.removeEventListener('mousewheel', this.onMouseWheel);
 		@_outer.removeEventListener('scroll', this.onScroll);
 		clearInterval @check_end_interval
 
-
-	componentDidMount: ()->
-		@_outer.addEventListener('DOMMouseScroll', this.onMouseWheel, false)
-		@_outer.addEventListener('mousewheel', this.onMouseWheel)
-		@_outer.addEventListener('scroll', this.onScroll)
 
 
 	
@@ -197,6 +193,11 @@ class Grid extends Component
 		@state.display_children = []
 		@state.index_array = []
 		@state.min_row_index = 0
+		@state.row_h = null
+		@state.row_n = null
+		@state.row_top = null
+		@state.row_bot = null
+		@state.offset_update = null
 
 
 
@@ -219,6 +220,8 @@ class Grid extends Component
 		@flushState()
 		for child,i in children
 			@addChild(child,i)
+
+		# console.log @state
 		return children
 
 
@@ -234,15 +237,18 @@ class Grid extends Component
 
 
 	getDim: ()=>
+		# console.log @_inner?.clientWidth
 		@_inner?.clientWidth / @props.w
 
 	getInnerHeight: ()->
 		@getDim() * @state.index_array.length
 
 	offsetChildren: (children)->
+		
 		arr = @state.index_array
 		dim = @getDim()
 
+		
 		row_h = Math.round(@_outer.clientHeight/dim)
 		row_n = Math.round((@props.offset_height_factor * @_outer.clientHeight)/dim)
 		row_top = Math.round(@_outer.scrollTop/dim)
@@ -268,9 +274,11 @@ class Grid extends Component
 
 
 		display_children = []
-		added = {}
+		added = []
 		for row in [row_top...row_bot]
 			for spot in arr[row]
+				if spot == -1
+					continue
 				if !(added[spot]?)
 					added[spot] = true
 					if @state.scroll_up
@@ -281,8 +289,9 @@ class Grid extends Component
 		return display_children
 
 	updateGrid: (oldProps,newProps)->
-		console.log oldProps,newProps
-		if oldProps.children.length != newProps.children.length
+		# console.log 'update grid'
+		# console.log oldProps,newProps
+		if oldProps.children.length != newProps.children.length || oldProps.list_key != newProps.list_key
 			@state.display_children = @offsetChildren(@setChildren(newProps.children))
 
 		if oldProps.append_children.length != newProps.append_children.length
@@ -310,20 +319,26 @@ class Grid extends Component
 
 
 	componentDidMount: ()->
-		@state.display_children = @offsetChildren(@setChildren(@props.children))
-		@render()
-		@_outer.addEventListener 'scroll',@onScroll
+		@_outer.addEventListener('scroll', this.onScroll)
+		setTimeout ()=>
+			@state.display_children = @offsetChildren(@setChildren(@props.children))
+			@forceUpdate()
+		,0
+
+		
 
 	updateScroll: ()->
 		@_outer.scrollTop = @state.row_scroll_top * @getDim()
 
 
-	componentWillUpdate: ()->
+	componentWillUpdate: (newProps)->
 		if @_inner.clientWidth != @state.inner_width
 			console.log 'WILL UPDATE'
 			@updateScroll()
-			@state.display_children = @offsetChildren(@props.children)
+			# @state.display_children = @offsetChildren(@props.children)
 			@state.inner_width = @_inner.clientWidth
+
+		@updateGrid(@props,newProps)
 
 	childVisible: (c)->
 		d = @getDim()
@@ -353,6 +368,8 @@ class Grid extends Component
 			if !c
 				return null
 			@props.children[c.attributes.i]
+
+		# log @state.display_children
 
 		for c,i in @state.display_children
 			if !c? || !@state.child_props.length

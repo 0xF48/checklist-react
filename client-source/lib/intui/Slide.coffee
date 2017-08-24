@@ -66,6 +66,8 @@ class Slide extends Component
 	componentDidUpdate: (p_props)->
 		@updateSlidePos(@checkSlideUpdate(p_props))
 
+	# componentDidMount: ()->
+
 	checkSlideUpdate: (p_props)->
 		if !@props.slide
 			return 0
@@ -191,11 +193,18 @@ class Slide extends Component
 
 
 	componentDidMount: ()=>
+		# log @props.pos,@props.class
 		if @props.slide && @props.pos > 0
-			setTimeout ()=>
-				@setStateDim()
-				@setXY @getIndexXY(@props.pos)
-			,0
+			# console.log 'SET XY'
+			# setTimeout ()=>
+			@setStateDim()
+			@setXY @getIndexXY(@props.pos)
+
+	# 	@bindEvents()
+	# componentWillUnmount: ()=>
+	# 	@unbindEvents()
+			# ,0
+	# componentWillUpdate: ()=>
 
 	getBeta: ()=>
 		beta = @props.beta + '%'
@@ -270,8 +279,22 @@ class Slide extends Component
 		if e.which == 13 && @props.onEnter
 			this.props.onEnter()
 
+	# bindEvents: ()->
+	# 	if @props.onMouseEnter
+	# 		@_outer.addEventListener 'mouseenter',@props.onMouseEnter
+	# 	if @props.onMouseLeave
+	# 		@_outer.addEventListener 'mouseleave',@props.onMouseLeave
+	
+	# unbindEvents: ()->
+	# 	if @props.onMouseEnter
+	# 		@_outer.removeEventListener 'mouseenter',@props.onMouseEnter
+	# 	if @props.onMouseLeave
+	# 		@_outer.removeEventListener 'mouseleave',@props.onMouseLeave
+	
+
 	# render component
 	render: =>
+		# console.log 'render'
 
 
 		class_center = @props.center && '-i-s-center' || null
@@ -293,19 +316,28 @@ class Slide extends Component
 				className: cn '-i-s-inner',class_vert,@props.iclass,class_center
 
 			slide = h 'div',
-				ref: (e)=>
-					@_outer = e
-				className: outer_class
-				onKeyDown: @onKeyDown
-				style:@getOuterHW()
+				Object.assign 
+					ref: (e)=>
+						@_outer = e
+					className: outer_class
+					onKeyDown: @onKeyDown
+					style:@getOuterHW()
+				,@pass_props
+				
 				h 'div',
-					Object.assign inner_props, @pass_props
+					inner_props
 					inner
 				outer
 		else
 			outer_class = cn '-i-s-static',@props.class,class_fixed,class_vert,class_center,class_reverse
 			slide = h 'div',
-				Object.assign {onKeyDown: @onKeyDown,style:@getOuterHW()},@pass_props,{className: outer_class}
+				Object.assign 
+					ref: (e)=>
+						@_outer = e
+					onKeyDown: @onKeyDown,
+					style:@getOuterHW()
+					className: outer_class
+				,@pass_props
 				@props.children
 
 

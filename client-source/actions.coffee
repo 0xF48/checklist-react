@@ -12,7 +12,7 @@ uploadImage = (form,res,rej,use_get)->
 		success: (url)->
 			res(url)
 		error: (xhr,type)->
-			actions.setState
+			actions.mergeState
 				error: xhr.response || 'error'
 
 
@@ -26,7 +26,7 @@ sendState = (opt)->
 		timeout: 1000
 		success: actions.mergeState
 		error: (xhr,type)->
-			actions.setState
+			actions.mergeState
 				error: xhr.response
 			if opt.rej
 				opt.rej(new Error 'error')
@@ -166,25 +166,30 @@ class Actions
 
 		
 
-		
-		uploadImage form,
-		(img_url)->
+		if form.get('file')
+			uploadImage form,
+			(img_url)->
 
-			state.img = img_url
+				state.img = img_url
+				sendState
+					type: 'post'
+					route: route
+					state: state
+
+			url = URL.createObjectURL(form.get('file'))
+			img = new Image()
+			img.src = url
+			img.onload = ()->
+				dim = getPinWH(img.width,img.height)
+				Object.assign state,dim
+		else
 			sendState
 				type: 'post'
 				route: route
 				state: state
-
-		url = URL.createObjectURL(form.get('file'))
-		img = new Image()
-		img.src = url
-		img.onload = ()->
-			dim = getPinWH(img.width,img.height)
-			Object.assign state,dim
-		
-		
-		
+			
+			
+			
 
 		@hideModal()
 			

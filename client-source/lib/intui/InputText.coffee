@@ -15,6 +15,9 @@ class InputText extends Component
 		@setState
 			focus: yes
 		@_input.focus()
+
+	onInput: ()=>
+		@props.onInput()
 	onBlur: ()=>
 		if !@state.focus then return false
 		@setState
@@ -45,7 +48,8 @@ class InputText extends Component
 			onKeyDown: @onKey
 			onFocus: @onFocus
 			onBlur: @onBlur
-			onInput: @props.onChange
+			onInput: @onInput
+			value: @props.value
 			# value: @state.initial_value || @state.value 
 			type: @props.type || 'text'
 			style: style

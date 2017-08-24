@@ -82,6 +82,7 @@ class InputFile extends Component
 				type: 'file'
 				ref: (e)=>
 					@_file = e
+					@props.ref && @props.ref(e)
 				onBlur: @onBlur
 				onChange: @onChange
 			

@@ -92,7 +92,7 @@ class editTodoForm extends Component
 				className: 'title'
 				'edit todo'
 			h InputText,
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						name: e.target.value
 				ref: (e)=>
@@ -112,8 +112,9 @@ class editTodoForm extends Component
 				onClick: @save
 				label: 'save'
 			h Button,
-				size: g.dim
-				className: 'error'
+				dim: g.dim
+				width: g.dim
+				className: 'error btn'
 				onClick: ()=>
 					actions.removeTodo store.state.group._id,props.view.edit_todo && props.view.edit_todo._id,props.view.edit_todo_sub && props.view.edit_todo_sub._id
 				name: @state.name
@@ -150,7 +151,7 @@ class addTodoForm extends Component
 				'add todo to '+@props.group.name
 			parent_label
 			h InputText,
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						text: e.target.value
 				ref: (e)=>
@@ -270,7 +271,6 @@ class Todo extends Component
 			hover_sub_opt: []
 			hover_sub_opt_left: []
 			expanded: yes
-
 
 	subTodos: ()->
 		view = store.state.view
@@ -424,6 +424,34 @@ class Todo extends Component
 			photo_count = props.pins.length
 
 
+		hide_pin = true
+
+
+		if @state.hover || @state.hover_opt || (!store.state.view.show_todo_sub && store.state.view.show_todo && store.state.view.show_todo._id == props._id)
+			hide_pin = false
+
+
+
+
+		# SHOW PINS BUTTON
+		show_pins_button = h Button,
+			width: g.dim
+			className: cn 'pin-btn',active && 'active',hide_pin && 'hidden-pin-btn'
+			onMouseEnter: (e)=>
+				@setState
+					hover_opt: yes
+			onMouseLeave: (e)=>
+				@setState
+					hover_opt: no
+			onClick: (e)=>
+				actions.showPins(@props)
+				e.preventDefault()
+				e.stopPropagation()
+				return false
+			i: props.completed_at && 'photo_camera' || 'location_on'
+			pre: h 'div',
+				className: 'photo_count'
+				photo_count
 
 
 		if props.todos.length && @state.expanded
@@ -489,8 +517,9 @@ class Todo extends Component
 					@setState
 						hover_opt_left: no
 				onClick: ()=>
+					console.log @props.completed_at instanceof Date,@props.completed_at
 					actions.editTodo store.state.group._id,props._id,null,
-						completed_at: if props.completed_at instanceof Date then null else new Date()
+						completed_at: if @props.completed_at instanceof Date then null else new Date()
 		else
 			check_btn = h ExpandBtn,
 				onClick: ()=>
@@ -514,14 +543,6 @@ class Todo extends Component
 				active = true
 		
 
-		hide_pin = true
-
-
-		if @state.hover || @state.hover_opt || (!store.state.view.show_todo_sub && store.state.view.show_todo && store.state.view.show_todo._id == props._id)
-			hide_pin = false
-
-		
-
 		hover_left = @state.hover_opt_left
 		if store.state.view.edit_todo && store.state.view.edit_todo._id == props._id
 			if !store.state.view.edit_todo_sub
@@ -532,6 +553,7 @@ class Todo extends Component
 
 		# TODO NAME AND DATE
 		name_date = h Slide,
+			key: 'name_date'
 			vertical: no
 			beta: 100
 			onClick: ()=>
@@ -541,72 +563,76 @@ class Todo extends Component
 				else if !@props.completed_at
 					actions.editTodo store.state.group._id,@props._id,null,
 						completed_at: if @props.completed_at instanceof Date then null else new Date()
-			onMouseEnter: (state)=>
-				@setState 
-					hover: true
-			onMouseLeave: (state)=>
-				@setState 
-					hover: false
 			className: 'name'
 			h 'span',null,@props.name
 			date
 
 
 
-		# SHOW PINS BUTTON
-		show_pins_button = h Button,
-			width: g.dim
-			className: cn 'pin-btn',active && 'active',hide_pin && 'hidden-pin-btn'
-			onMouseEnter: (e)=>
-				@setState
-					hover_opt: yes
-			onMouseLeave: (e)=>
-				@setState
-					hover_opt: no
-			onClick: (e)=>
-				actions.showPins(@props)
-				e.preventDefault()
-				e.stopPropagation()
-				return false
-			i: props.completed_at && 'photo_camera' || 'location_on'
-			pre: h 'div',
-				className: 'photo_count'
-				photo_count
 
 
 
+		# if !@state
+		if !@state.hover
+			options = null
+			options_left = null
 
+		# if @state.hover
+		
+		full_todo = h Slide,
+			className: props.completed_at && 'done' || 'undone'
+			vertical: no
+			slide: no
+			height: g.dim
+			check_btn			
+			h Slide,
+				key: 'todo-main'
+				beta: 100
+				slide: yes
+				pos: if @state.hover_opt then 2 else if hover_left then 0 else 1
+				className: cn 'todo todo-main'
+				
+				#left options
+				h Slide,
+					width: g.dim*2
+					options_left
+
+				# name/date
+				name_date
+				options
+			show_pins_button
+		# # else
+		# mini_todo = h Slide,
+		# 	className: !sub_todos && (cn 'todo-wrap',(@props.i%2 == 0 && 'list-alt' || '') ,props.completed_at && 'done' || 'undone')
+		# 	vertical: no
+		# 	slide: no
+		# 	height: g.dim
+		# 	check_btn
+		# 	name_date
+		# 	show_pins_button
+			
 
 		h Slide,
-			auto: yes
+			onMouseEnter: (e)=>
+				@setState
+					hover: yes
+			onMouseLeave: (e)=>
+				@setState
+					hover: no
+			key: @props._id
 			vertical: yes
 			className: cn 'todo-wrap',(@props.i%2 == 0 && 'list-alt' || '') ,props.completed_at && 'done' || 'undone'
-			
-			# main todo + options
-			h Slide,
-				vertical: no
-				slide: no
-				height: g.dim
-				check_btn
-				h Slide,
-					beta: 100
-					slide: yes
-					pos: if @state.hover_opt then 2 else if hover_left then 0 else 1
-					className: cn 'todo todo-main'
-					
-					#left options
-					h Slide,
-						auto: yes
-						options_left
-
-					# name/date
-					name_date
-					options
-				show_pins_button
-
-			# sub todos
+			auto: yes
+			full_todo
 			sub_todos
 			
+		
+
+			
+			
+
+
+
 
 
 
@@ -644,16 +670,17 @@ class addPinForm extends Component
 			type: 'photo'
 			is_event: is_event
 
-	btn: (type)->
+	btn: (type,r)->
 		h SlideButton,
 			className: 'pin-type-button'
 			# reverse: yes
 			disabled: @props.is_event
-			sClass: 'b1'
+			sClass: ''
 			pClass: 'b3'
 			active: @state.type == type
 			width: g.dim
-			vertical: yes
+			vertical: no
+			reverse: r
 			onClick: ()=>
 				@setState
 					type: type
@@ -671,6 +698,16 @@ class addPinForm extends Component
 		
 		f.append 'type',@state.type
 		actions.addPin(store.state.group._id,@props.view.edit_todo._id,@props.view.edit_todo_sub && @props.view.edit_todo_sub._id,f,@state)
+		@state.files = null
+		@state.name = null
+		@state.text = null
+		@state.link = null
+
+		@_text.value = null
+		console.log @_text
+		# @_file.value = null
+		# @_caption.value = null
+		# @_link.value = null
 		
 
 	render: (props,state)=>
@@ -680,7 +717,7 @@ class addPinForm extends Component
 			ctx = h 'div',
 				className: 'pin-ctx'
 				h InputText,
-					onChange: (e)=>
+					onInput: (e)=>
 						@setState
 							name: e.target.value
 					ref: (e)=>
@@ -689,7 +726,7 @@ class addPinForm extends Component
 					label: 'caption'
 					value: @state.name
 				h InputFile,
-					onChange: (e)=>
+					onInput: (e)=>
 						@setState
 							files: e.target.files
 					ref: (e)=>
@@ -704,7 +741,7 @@ class addPinForm extends Component
 			ctx = h 'div',
 				className: 'pin-ctx'
 				h InputText,
-					onChange: (e)=>
+					onInput: (e)=>
 						@setState
 							link: e.target.value
 					ref: (e)=>
@@ -721,12 +758,13 @@ class addPinForm extends Component
 			ctx = h 'div',
 				className: 'pin-ctx'
 				h InputTextArea,
-					onChange: (e)=>
+					onInput: (e)=>
 						log 'ON TEXT AREA ',e.target.value
 						@setState
 							text: e.target.value
 					ref: (e)=>
 						@_text = e
+					value: @state.text
 					type: 'text'
 					label: 'a short text'
 					# value: @state.text
@@ -755,9 +793,9 @@ class addPinForm extends Component
 				# center: yes
 				vertical: no
 				height: g.dim
-				@btn('photo')
-				@btn('link')
-				@btn('textsms')
+				@btn('photo',yes)
+				@btn('link',no)
+				@btn('textsms',yes)
 			ctx
 			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
@@ -796,18 +834,16 @@ class ListItemView extends Component
 		@state=
 			filter_checked: no
 			filter_dates: no
-			refresh_sort: yes
+			sort: no
 
-	refreshSort: ()=>
+	sort: ()=>
 		@setState
-			refresh_sort: yes
+			sort: !@state.sort
 	filterDates: ()=>
 		@setState
-			refresh_sort: yes
 			filter_dates: !@state.filter_dates
 	filterTodos: ()=>
 		@setState
-			refresh_sort: yes
 			filter_checked: !@state.filter_checked
 
 	showGroupPins: ()->
@@ -817,10 +853,12 @@ class ListItemView extends Component
 		todo_items = props.group.state.todos.map (todo,i)->
 			todo.index = i
 			todo.key = todo._id
+			# console.log store.state.view.hoverTodo_id
+			todo.hover = store.state.view.hoverTodo_id == todo._id
 			h Todo,todo
 
-		if @state.refresh_sort
-			@state.refresh_sort = false
+		if @state.sort
+			# @state.refresh_sort = false
 			todo_items.sort (a,b)->
 				a = a.attributes
 				b = b.attributes
@@ -913,13 +951,16 @@ class ListItemView extends Component
 				reverse: no
 				i: 'playlist_add_check'
 				active: @state.filter_checked
-			h Button,
-				onClick: @refreshSort
-				className: 'btn btn-opaque'
+			h SlideButton,
+				onClick: @sort
+				active: @state.sort
+				className: 'btn'
+				sClass: ''
+				pClass: 'b3'
 				width: g.dim
 				vertical: yes
 				reverse: no
-				i: 'refresh'
+				i: 'sort'
 		]
 
 		h Slide,
@@ -1021,7 +1062,7 @@ class PinsView extends Component
 		super(props)
 		@state = 
 			filter: null
-			reset_grid: no
+
 	componentWillRecieveProps: (props)->
 		log props.vuew.show_todo && props.view.show_todo._id,@props.view.show_todo && @props.view.show_todo._id
 
@@ -1037,12 +1078,14 @@ class PinsView extends Component
 		if !props.group
 			return
 		
-
+		list_key = @state.filter || 'all-' 
 		# decide which pins to display
 		if props.view.show_todo_sub
 			pins = pins.concat props.view.show_todo_sub.pins
+			list_key += props.view.show_todo_sub._id
 		else if props.view.show_todo
 			pins = pins.concat props.view.show_todo.pins
+			list_key += props.view.show_todo._id
 		else
 			for todo in props.group.state.todos
 				pins = pins.concat todo.pins
@@ -1070,36 +1113,31 @@ class PinsView extends Component
 					pins: pins
 					pin: pin
 			h GridItem,
-				i:i, w: pin.w,h: pin.h,key: pin.id,
-					h Pin,pin
+				w: pin.w
+				h: pin.h
+				key: pin.id
+				i:i
+				h Pin,pin
 		
-		reset_grid = @state.reset_grid
-		if @state.reset_grid == true
-			@state.reset_grid = false
+		# reset_grid = @state.reset_grid
+		# if @state.reset_grid == true
+		# 	@state.reset_grid = false
 
 		# console.log 'RESET:',reset_grid
 		
 		h Grid,
 			w: 2
-			className: 'pins'
-			fixed : false
-			toggle_reset: reset_grid
+			oclass: 'pins'
 			auto: true
-			native_scroll : yes
-			pause_scroll : false
-			render_beta : 1
-			update_offset_beta : 2
-			animate: !g.isSafari && true || false
-			max_grid_height_beta : 2
-			max_reached: true
-			innerClass: 'grid-inner'
-			pre: h 'div',
-				# height: g.dim
-				className: 'pins-options'
+			iclass: 'grid-inner'
+			list_key: list_key
+			pre_children: h Slide,
+				vertical: no
+				height: g.dim
+				class: 'pins-options'
 				h SlideButton,
 					onClick: actions.addTodo
 					className: 'btn pins-option'
-					key: '1'
 					sClass: ''
 					pClass: 'b1'
 					width: g.dim
@@ -1108,13 +1146,11 @@ class PinsView extends Component
 					i: 'location_on'
 					active: @state.filter == 'plan'
 					onClick: ()=>
-						log 'ON CLICK 1'
 						@setState
 							filter: if @state.filter == 'plan' then null else 'plan' 
 				h SlideButton,
 					onClick: actions.addTodo
 					className: 'btn pins-option'
-					key: '2'
 					sClass: ''
 					pClass: 'b1'
 					width: g.dim
@@ -1123,10 +1159,8 @@ class PinsView extends Component
 					i: 'photo_camera'
 					active:  @state.filter == 'event'
 					onClick: ()=>
-						log 'ON CLICK 2'
 						@setState
 							filter: if @state.filter == 'event' then null else 'event' 
-		,
 			pins
 
 
@@ -1148,7 +1182,7 @@ class UserLoginView extends Component
 			h InputText,
 				height: g.dim
 				disabled: @props.disabled
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						email: e.target.value
 				type: 'text'
@@ -1158,7 +1192,7 @@ class UserLoginView extends Component
 			h InputText,
 				height: g.dim
 				disabled: @props.disabled
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						pass: e.target.value
 				type: 'password'
@@ -1200,7 +1234,7 @@ class UserSignupView extends Component
 		
 			h InputText,
 				height: g.dim
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						email: e.target.value
 				type: 'text'
@@ -1211,7 +1245,7 @@ class UserSignupView extends Component
 			
 			h InputText,
 				height: g.dim
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						pass: e.target.value
 				type: 'password'
@@ -1223,7 +1257,7 @@ class UserSignupView extends Component
 			
 			h InputText,
 				height: g.dim
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						pass_confirm: e.target.value
 				type: 'password'
@@ -1375,17 +1409,20 @@ class ModalView extends Component
 			modal_color = '#000'
 
 		modal_content = null
+		
+		if props.view.show_modal
+			
 
-		switch ctn
-			when 'addTodo' then modal_content = h addTodoForm,props
-			when 'addPin' then modal_content = h addPinForm,props
-			when 'editTodo' then modal_content = h editTodoForm,props
-			when 'slideshow' then modal = h SlideShow,props
-			when 'newGroup' then modal_content = h CreateGroupForm,props
-			when 'addFriend' then modal_content = h AddFriendView,props
-			when 'editGroup' then modal_content = h EditGroupForm,props
-			when 'userSettings' then modal_content = h UserSettings,props
-			when 'linkGroup' then modal_content = h LinkGroup,props
+			switch ctn
+				when 'addTodo' then modal_content = h addTodoForm,props
+				when 'addPin' then modal_content = h addPinForm,props
+				when 'editTodo' then modal_content = h editTodoForm,props
+				when 'slideshow' then modal = h SlideShow,props
+				when 'newGroup' then modal_content = h CreateGroupForm,props
+				when 'addFriend' then modal_content = h AddFriendView,props
+				when 'editGroup' then modal_content = h EditGroupForm,props
+				when 'userSettings' then modal_content = h UserSettings,props
+				when 'linkGroup' then modal_content = h LinkGroup,props
 
 		# console.log modal_content
 
@@ -1531,7 +1568,7 @@ class EditGroupForm extends Component
 				className: 'title'
 				'edit group'
 			h InputText,
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						name: e.target.value
 				ref: (e)=>
@@ -1575,7 +1612,7 @@ class CreateGroupForm extends Component
 				className: 'title'
 				'create group'
 			h InputText,
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						name: e.target.value
 				ref: (e)=>
@@ -1619,12 +1656,12 @@ class Menu extends Component
 	opt: (icon,onClick,active,hover,w)->
 		h SlideButton,
 			# className: 'btn'
-			sClass: 'b3'
-			pClass: ''
+			sClass: ''
+			pClass: 'b3'
 			width: g.dim * (w || 1)
 			vertical: yes
 			hover: hover
-			reverse: yes
+			reverse: no
 			# active_index_offset: 5
 			index_offset: 5
 			i: icon
@@ -1731,7 +1768,7 @@ class AddFriendView extends Component
 				h InputText,
 					ref: (e)=>
 						@_input = e
-					onChange: (e)=>
+					onInput: (e)=>
 						@setState
 							search: e.target.value
 						actions.searchUsers(@state.search)
@@ -1766,7 +1803,7 @@ class UserView extends Component
 			height: g.dim
 			title
 	makeGroups: (props)=>
-		console.log 'make groups'
+		# console.log 'make groups'
 		group_items = @props.user.groups.map (g,i)->
 			h GridItem,
 				i:i, w: 2,h: 1,key: g._id,
@@ -1896,7 +1933,7 @@ class UserSettings extends Component
 			vertical: yes
 			onEnter: @save
 			h InputText,
-				onChange: (e)=>
+				onInput: (e)=>
 					@setState
 						name: e.target.value
 				ref: (e)=>
@@ -1907,7 +1944,7 @@ class UserSettings extends Component
 				value: @state.name
 			h InputFile,
 				height: g.dim
-				onChange: @setPicture
+				onInput: @setPicture
 				label: 'picture'
 				value: null
 			h Slide,
@@ -1958,7 +1995,7 @@ class MainView extends Component
 			main_top = h GroupView,props
 		
 
-		if props.user
+		if props.user && props.view.main_view == 'user'
 			main_bot = h UserView,props
 
 

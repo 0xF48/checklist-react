@@ -295,6 +295,11 @@ i{
 	// background: $error;
 	color: $error;
 }
+
+// .error-btn{
+// 	height: $dim !important;
+// 	width: $dim !important;
+// }
 .show-listitem-pins{
 	position: absolute;
 	right: 0px;
@@ -498,7 +503,7 @@ span{
 .todo.done{
 	color: $pink;
 }
-.todo-wrap.undone:hover{
+.todo.undone:hover{
 	i{
 		color: $b3;
 	}
@@ -922,6 +927,7 @@ span{
 	@include center;
 	height: 100%;
 	width: 100%;
+	cursor: pointer;
 	background: $dark-opaque;
 	transition: background 0.3s ease;
 	&:hover{

@@ -13,6 +13,7 @@ class Input extends Component
 		children = [icon,label].concat @props.children
 		
 		h 'div',
+			ref: @props.ref
 			onClick:  @props.onClick || @props.onFocus
 			className: cn '-i-input',@props.className,@props.disabled && 'disabled'
 		,children

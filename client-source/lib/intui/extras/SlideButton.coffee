@@ -96,6 +96,11 @@ class SlideButton extends Component
 		bot.label = bot.label || @props.label
 		bot.i = bot.i || @props.i
 
+		if @props.reverse
+			tp = top.class
+			top.class = bot.class
+			bot.class = tp
+
 		# console.log @props.disabled
 		# console.log @getPos()
 

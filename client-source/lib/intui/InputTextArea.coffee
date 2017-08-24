@@ -11,7 +11,7 @@ class InputTextArea extends Component
 			initial_value: props.value
 			value: props.value
 	onClick: =>
-		@base.querySelector('textarea').focus()
+		@_text_area.focus()
 
 	onFocus: =>
 		if @state.focus
@@ -27,15 +27,15 @@ class InputTextArea extends Component
 			focus: no
 
 	resize: =>
-		text = @base.querySelector('textarea')
 		setTimeout ()=>
-			text.style.height = 'auto';
-			text.style.height = text.scrollHeight+'px';
+			@_text_area.style.height = 'auto';
+			@_text_area.style.height = @_text_area.scrollHeight+'px';
 		,0
 
-	onChange: (e)=>
+	onInput: (e)=>
 		@resize(e)
-		@props.onChange && @props.onChange(e)
+		@state.value = e.value
+		@props.onInput && @props.onInput(e)
 	componentDidMount: =>
 		@resize()
 	render: ->
@@ -43,8 +43,11 @@ class InputTextArea extends Component
 			label = h 'span',className:'label',@props.label
 		area = h 'textarea',
 			onBlur: @onBlur
+			value: @props.value
 			onFocus: @onFocus
-			onChange: @onChange
+			onInput: @onInput
+			ref: (e)=>
+				@_text_area = e
 			# onCut: @onChange
 			# onPaste: @onChange
 			# onDrop: @onChange
