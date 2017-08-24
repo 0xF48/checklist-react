@@ -8,5 +8,3 @@ config-*.json
 migrations
 .DS_Store
 data/*
-client-static/main.bundle.js
-client-static/main.bundle.js.map
