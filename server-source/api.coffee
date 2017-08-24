@@ -11,6 +11,7 @@ _ = require 'lodash'
 Busboy = require 'busboy'
 path = require 'path'
 fs = require 'fs'
+sharp = require 'sharp'
 
 class View 
 	constructor: (view,session)->
@@ -97,6 +98,12 @@ app.use '/user/',user_auth
 .post '/user/upload',(req,res,next)->
 	image_id = uuid()
 	save_url = null
+	file_ext = null
+	save_path = null
+	file_thumb_name = null
+	save_path_thumb = null
+	file_name = null
+	save_url_thumb = null
 	bb = new Busboy 
 		headers: req.headers
 	bb.on 'file', (fieldname, file, filename, encoding, mimetype)=>
@@ -104,15 +111,31 @@ app.use '/user/',user_auth
 		if mimetype != 'image/png' && mimetype != 'image/gif' && mimetype != 'image/jpeg' && mimetype != 'image/jpg'
 			return next new Error('bad mimetype')
 		
-		file_name  = image_id + '.' + mimetype.match('image/(.*)')[1]
-		img = '/data/'+file_name
+		file_ext = mimetype.match('image/(.*)')[1]
+		file_name  = image_id + '.' + file_ext
+		file_thumb_name =  image_id+"_thumb."+file_ext
+
+
+		save_url_thumb = path.join CFG.save_url, file_thumb_name
+		save_path_thumb = path.join CFG.save_dir, file_thumb_name
+		
 		save_path = path.join CFG.save_dir, file_name
 		save_url = path.join CFG.save_url, file_name
-		console.log file_name,save_path
+
 		file.pipe fs.createWriteStream(save_path)
+
 	bb.on 'finish', ()->
-		res.send save_url
-	return req.pipe(bb)
+		sharp(save_path)
+		.resize(400)
+		.toFile(save_path_thumb)
+		.then ()->
+			res.send 
+				thumb: save_url_thumb
+				img:   save_url
+		.catch (e)->
+			next new Error 'could not resize image'
+	
+	req.pipe(bb)
 
 
 .get '/user/logout', (req,res)->
@@ -180,8 +203,10 @@ makePin = (body)->
 	link: trim body.link
 	is_event: Boolean(body.is_event)
 	img: trim body.img
+	thumb: trim body.thumb
 	link_icon_img: trim body.link_icon_img
 	text: trim body.text
+
 
 setGroup = (req,group)->
 	req.session.group = 
@@ -299,11 +324,14 @@ app
 		res.json getState(req)
 
 
+
 .post '/user/group/:group_id/todo/:todo_id/set', (req,res,next)->
 	Object.assign req.todo,setTodo(req.body)
 	req.group.markModified('state')
 	req.group.save().then ()->
 		res.json getState(req)
+
+
 
 .post '/user/group/:group_id/todo/:todo_id/remove', (req,res,next)->
 	req.group.state.todos.splice req.group.state.todos.indexOf(req.todo),1
@@ -321,6 +349,7 @@ app
 	req.todo.pins.push pin
 	req.group.markModified('state')
 	req.group.save().then ()->
+		console.log req.group.getState()
 		res.json getState(req)
 
 

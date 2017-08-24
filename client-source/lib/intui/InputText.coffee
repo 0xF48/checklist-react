@@ -16,8 +16,8 @@ class InputText extends Component
 			focus: yes
 		@_input.focus()
 
-	onInput: ()=>
-		@props.onInput()
+	onInput: (e)=>
+		@props.onInput(e)
 	onBlur: ()=>
 		if !@state.focus then return false
 		@setState
@@ -48,18 +48,13 @@ class InputText extends Component
 			onKeyDown: @onKey
 			onFocus: @onFocus
 			onBlur: @onBlur
-			onInput: @onInput
 			value: @props.value
-			# value: @state.initial_value || @state.value 
 			type: @props.type || 'text'
 			style: style
 			className: '-i-input-text'
 		})
 		h Input,
-			onFocus: @onFocus
-			onBlur: @onBlur
 			disabled: @props.disabled
-			# hideLabel: @props.hideLabel
 			label: @props.label
 			icon: @props.icon
 			className: cn @props.className,@state.focus && 'focus'||null,(@state.focus || @state.value) && 'has-data'||null,@props.icon_labh && '-i-icon-label'||null

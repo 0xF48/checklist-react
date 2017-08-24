@@ -11,16 +11,6 @@ class InputFile extends Component
 			initial_value: props.value
 			value: props.value
 			clicked: false
-	# onFocus: ()=>
-	# 	if @state.focus || @props.disabled then return false
-	# 	@setState
-	# 		focus: yes
-	# 	$(@base).find('input').focus()
-	# onBlur: ()=>
-	# 	if !@state.focus then return false
-	# 	@setState
-	# 		focus: no
-	# 	$(@base).find('input').blur()
 	onBlur: (e)=>
 		console.log 'blur'
 	onClick: (e)=>
@@ -39,12 +29,13 @@ class InputFile extends Component
 		@_file.dispatchEvent(e_n)
 		
 
-	onChange: (e)=>
+	onInput: (e)=>
 		# console.log e.target.value
+		console.log "ON INPUT"
 		@setState
 			initial_value: null
 			value: e.target.files[0].name
-		@props.onChange && @props.onChange(e)
+		@props.onInput && @props.onInput(e)
 	# onComponentDidMount: (e)=>
 
 	render: =>
@@ -78,13 +69,12 @@ class InputFile extends Component
 
 			h 'input',
 				name: @props.name
-				# value: @state.initial_value || @state.value
+				value: @state.initial_value || @state.value
 				type: 'file'
 				ref: (e)=>
 					@_file = e
-					@props.ref && @props.ref(e)
 				onBlur: @onBlur
-				onChange: @onChange
+				onChange: @onInput
 			
 
 		

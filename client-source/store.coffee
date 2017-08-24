@@ -6,15 +6,9 @@ window.initial_state =
 	group: null
 	user: null
 	view: 
-		edit_todo_index_sub: null
-		show_pins_todo_index: null
-		show_pins_todo_index_sub: null
 		main_view: 'home'
 		side_view: 'pins'
 		show_todo: null
-		edit_list: null
-		edit_todo_index: null
-		slideshow_pins: []
 		slideshow_pin: null
 		search_users: []
 
@@ -91,15 +85,28 @@ for key,val of window.server_state
 
 
 fillData = (state)->
+	# console.log 'FILL DATA'
 	if state.group
 		updateCount(state.group)
 		updateDates(state.group)
 		updateIndices(state.group)
 	if state.user
 		for g in state.user.groups
+			for todo in g.state.todos
+				if state.view.show_todo && todo._id == state.view.show_todo._id
+					state.view.show_todo = todo
+				for sub in todo.todos
+					if state.view.show_todo_sub && sub._id == state.view.show_todo_sub._id
+						state.view.show_todo_sub = sub
+
 			updateDates(g)
 			updateCount(g)
 			updateIndices(g)
+
+
+	
+	
+
 
 fillData(window.initial_state)
 # console.log window.initial_state.user.groups[0].done_count

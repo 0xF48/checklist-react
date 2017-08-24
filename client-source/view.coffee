@@ -430,6 +430,16 @@ class Todo extends Component
 		if @state.hover || @state.hover_opt || (!store.state.view.show_todo_sub && store.state.view.show_todo && store.state.view.show_todo._id == props._id)
 			hide_pin = false
 
+		active = false
+		if store.state.view.show_todo && store.state.view.show_todo._id == props._id
+			if !store.state.view.show_todo_sub
+				active = true
+		
+
+		hover_left = @state.hover_opt_left
+		if store.state.view.edit_todo && store.state.view.edit_todo._id == props._id
+			if !store.state.view.edit_todo_sub
+				hover_left = yes
 
 
 
@@ -537,16 +547,6 @@ class Todo extends Component
 				expanded: @state.expanded
 
 
-		active = false
-		if store.state.view.show_todo && store.state.view.show_todo._id == props._id
-			if !store.state.view.show_todo_sub
-				active = true
-		
-
-		hover_left = @state.hover_opt_left
-		if store.state.view.edit_todo && store.state.view.edit_todo._id == props._id
-			if !store.state.view.edit_todo_sub
-				hover_left = yes
 
 
 
@@ -703,12 +703,6 @@ class addPinForm extends Component
 		@state.text = null
 		@state.link = null
 
-		@_text.value = null
-		console.log @_text
-		# @_file.value = null
-		# @_caption.value = null
-		# @_link.value = null
-		
 
 	render: (props,state)=>
 
@@ -799,9 +793,9 @@ class addPinForm extends Component
 			ctx
 			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
-				reverse: no
+				reverse: yes
 				disabled: !check_submit
-				sClass: 'b1'
+				sClass: 'b0'
 				pClass: 'b3'
 
 				height: g.dim
@@ -841,6 +835,7 @@ class ListItemView extends Component
 			sort: !@state.sort
 	filterDates: ()=>
 		@setState
+			sort: !@state.filter_dates
 			filter_dates: !@state.filter_dates
 	filterTodos: ()=>
 		@setState
@@ -892,7 +887,7 @@ class ListItemView extends Component
 			l_y = null
 			l_t = null
 			for i in [0...l]
-				console.log i
+				# console.log i
 				todo = todo_items[i].attributes
 				if todo.completed_at
 					date = todo.completed_at
@@ -1032,8 +1027,8 @@ class Pin extends Component
 					console.log 'ON CLICK'
 					props.onClick()
 				className: 'pin pin-img'
-				style: 
-					backgroundImage: 'url('+props.img+')'
+				style:
+					backgroundImage: 'url('+(props.thumb || props.img)+')'
 				name
 				pin_icon
 		else if props.type == 'textsms'		

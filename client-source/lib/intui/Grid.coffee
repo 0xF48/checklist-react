@@ -333,7 +333,7 @@ class Grid extends Component
 
 	componentWillUpdate: (newProps)->
 		if @_inner.clientWidth != @state.inner_width
-			console.log 'WILL UPDATE'
+			# console.log 'WILL UPDATE'
 			@updateScroll()
 			# @state.display_children = @offsetChildren(@props.children)
 			@state.inner_width = @_inner.clientWidth

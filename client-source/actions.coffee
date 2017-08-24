@@ -9,8 +9,8 @@ uploadImage = (form,res,rej,use_get)->
 		data: form
 		contentType: false
 		processData: false
-		success: (url)->
-			res(url)
+		success: (img)->
+			res img
 		error: (xhr,type)->
 			actions.mergeState
 				error: xhr.response || 'error'
@@ -90,9 +90,14 @@ class Actions
 
 
 	goUserHome: (state)->
+		@mergeState
+			view:
+				show_todo: null
+				show_todo_sub: null
 		sendState
 			type: 'get'
 			route: 'api/user'
+
 		@hideModal()
 
 
@@ -161,16 +166,20 @@ class Actions
 		else
 			route = '/api/user/group/'+group_id+'/todo/'+todo_id+'/addpin'
 		
-
+		
+		if state.type == 'link'
+			link = parseUrl(state.link)
+			state.link_icon_img = 'http://www.google.com/s2/favicons?domain='+link.host
 
 
 		
 
 		if form.get('file')
 			uploadImage form,
-			(img_url)->
+			(img)->
 
-				state.img = img_url
+				state.img = img.img
+				state.thumb = img.thumb
 				sendState
 					type: 'post'
 					route: route

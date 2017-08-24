@@ -102,7 +102,28 @@
 
 
 
+.-i-viewer{
+	background: black;
+	position: absolute;
+	width: 100vw;
+	height: calc(100vh - 50px);
+	top: 50px;
+	left: 0;
+	overflow: hidden;
+	@include center;
+}
 
+.-i-viewer-image{
+	border-radius: 10px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: opacity 0.3s ease;
+    opacity: 1;
+    &:hidden{
+    	opacity: 0;
+    }
+}
 
 // loader
 

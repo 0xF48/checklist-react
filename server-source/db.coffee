@@ -14,7 +14,7 @@ expireLinks = ()->
 	TodoGroupLink.remove
 		expires: {$lt:new Date()}
 	.then (ws)->
-		console.log 'removed links:',ws.result.ok,'/',ws.result.n
+		console.log 'removed links: ',ws.result.n
 
 
 
