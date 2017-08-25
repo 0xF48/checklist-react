@@ -30,6 +30,7 @@ class Modal extends Component
 		ctx.fill()
 
 	update: ()=>
+		@ctx = @_canvas.getContext('2d')
 		
 		rect = @_content.getBoundingClientRect()
 		@_canvas.width = @_overlay._overlay.clientWidth

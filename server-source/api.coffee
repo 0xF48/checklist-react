@@ -59,7 +59,6 @@ clearState = (req)->
 
 
 getState = (req,view)->
-	# console.log req.session
 	state = {}
 	state.user = if req.user then req.user.getState() else null
 	state.group = if req.group then req.group.getState() else null
@@ -109,7 +108,6 @@ app.use '/user/',user_auth
 	bb = new Busboy 
 		headers: req.headers
 	bb.on 'file', (fieldname, file, filename, encoding, mimetype)=>
-		# console.log fieldname,encoding,mimetype
 		if mimetype != 'image/png' && mimetype != 'image/gif' && mimetype != 'image/jpeg' && mimetype != 'image/jpg'
 			return next new Error('bad mimetype')
 		
@@ -213,7 +211,6 @@ makePin = (body)->
 setGroup = (req,group)->
 	new p (res,rej)->
 		group.populate 'users',(g)->
-			# log group.users
 			req.session.group = 
 				id: group.id
 			req.group = group
@@ -263,8 +260,6 @@ app
 	req.user
 	.joinGroup(req.params.group_invite)
 	.then (group)->
-		# console.log 'SET GROUP'
-		# console.log group
 		setGroup(req,group)
 		.then ()->
 			req.view.setState
@@ -382,7 +377,6 @@ app
 	req.todo.pins.push pin
 	req.group.markModified('state')
 	req.group.save().then ()->
-		# console.log req.group.getState()
 		res.json getState(req)
 
 
@@ -394,14 +388,12 @@ app
 		res.json getState(req)
 
 .post '/user/group/:group_id/todo/:todo_id/subtodo/:todo_id_sub/set', (req,res,next)->
-	# console.log req.body
 	Object.assign req.subtodo,setTodo(req.body)
 	req.group.markModified('state')
 	req.group.save().then ()->
 		res.json getState(req)
 
 .post '/user/group/:group_id/todo/:todo_id/subtodo/:todo_id_sub/remove', (req,res,next)->
-	# console.log req.body
 	Object.assign req.subtodo,setTodo(req.body)
 	req.group.markModified('state')
 	req.group.save().then ()->
@@ -423,25 +415,20 @@ app
 		req.user.save()
 		res.json getState(req)
 
-# .get '/user/group/:group_id/state', (req,res)->
-# 	res.send req.group.getState()
 
 .post '/user/group/:group_id/set', (req,res,next)->
-	# console.log req.group.owner.toString(),req.user.id.toString()
 	if req.group.owner.equals req.user
 		return next new Error 'you are not the owner, you cannot edit this list'
 
-	if req.body.remove_users
+	if req.body.remove_users && req.body.remove_users.length
 		req.body.remove_users = req.body.remove_users.filter (id)->
-			!(req.user.equals id)
+			req.user.id.toString() != id
+		if !req.body.remove_users.length
+			return next new Error 'cannot remove urself from the from'
 		req.group.users = req.group.users.filter (u)->
-			console.log u.toString(),req.body.remove_users
-
-
-			# console.log req.body.remove_users.indexOf(u.toString())
 			req.body.remove_users.indexOf(u.toString()) == -1
-		console.log req.group.users
-		# console.log req.group.users
+
+	11
 
 	_.merge req.group,req.body
 	req.group.markModified('state')

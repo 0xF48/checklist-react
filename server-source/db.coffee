@@ -78,7 +78,6 @@ User.on 'index', (err)->
 
 
 User.methods.joinGroup = (id)->
-	console.log id
 	return new p (res,rej)=>
 		TodoGroupLink.findOne 
 			_id: id

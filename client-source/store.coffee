@@ -103,9 +103,11 @@ fillData = (state)->
 			for todo in g.state.todos
 				if state.view.show_todo && todo._id == state.view.show_todo._id
 					state.view.show_todo = todo
+					break
 				for sub in todo.todos
-					if state.view.show_todo_sub && sub._id == state.view.show_todo_sub._id
-						state.view.show_todo_sub = sub
+					if state.view.show_todo && sub._id == state.view.show_todo._id
+						state.view.show_todo = sub
+						break
 
 			updateDates(g)
 			updateCount(g)
@@ -119,9 +121,11 @@ fillData = (state)->
 		for todo in state.group.state.todos
 			if state.view.show_todo && todo._id == state.view.show_todo._id
 				state.view.show_todo = todo
+				break
 			for sub in todo.todos
-				if state.view.show_todo_sub && sub._id == state.view.show_todo_sub._id
-					state.view.show_todo_sub = sub
+				if state.view.show_todo && sub._id == state.view.show_todo._id
+					state.view.show_todo = sub
+					break
 
 
 

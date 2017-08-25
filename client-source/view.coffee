@@ -12,7 +12,6 @@ Modal = require 'intui/Modal.coffee'
 
 SlideButton = require 'intui/extras/SlideButton.coffee'
 
-# console.log Button
 monthNames = ["January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December"]
 Viewer = require './lib/Viewer.coffee'
 
@@ -203,7 +202,6 @@ class Check extends Component
 			hover: no
 
 	render: (props)->
-		# console.log @state.hover
 		h Button,
 			onMouseEnter: (e)=>
 				@setState
@@ -217,7 +215,7 @@ class Check extends Component
 			width: g.dim
 			vertical: no
 			onClick: (e)=>
-				# log 'INDEX ',@props.index
+				
 				props.onClick()
 				e.preventDefault()
 				e.stopPropagation()
@@ -314,7 +312,7 @@ class Todo extends Component
 		# SHOW PINS BUTTON
 		show_pins_button = h Button,
 			width: g.dim
-			className: cn 'pin-btn',active && 'active',hide_pin && 'hidden-pin-btn'
+			className: cn 'pin-btn',active && 'active-pin',hide_pin && 'hidden-pin-btn'
 			onMouseEnter: (e)=>
 				@setState
 					hover_opt: yes
@@ -570,12 +568,7 @@ class addPinForm extends Component
 
 
 	componentWillMount: ()->
-		console.log 'WILL MOUNT'
-		# @state.files = null
-		# @state.name = null
-		# @state.text = null
-		# @state.link = null
-		# @state.type = 'photo'
+	
 		
 		if @props.view.edit_todo_sub
 			is_event = !!@props.view.edit_todo_sub.completed_at
@@ -618,8 +611,8 @@ class addPinForm extends Component
 						@_file = e
 					label: 'picture'
 					value: null
-			check_submit = @state.name && @state.files && true || false
-			# log @state	
+			check_submit = (@state.files && true || false)
+			
 
 		else if @state.type == 'link'
 			title = 'pin a link'
@@ -735,7 +728,6 @@ class ListItemView extends Component
 		todo_items = props.group.state.todos.map (todo,i)->
 			todo.index = i
 			todo.key = todo._id
-			# console.log store.state.view.hoverTodo_id
 			todo.hover = store.state.view.hoverTodo_id == todo._id
 			h Todo,todo
 
@@ -766,15 +758,13 @@ class ListItemView extends Component
 		for todo,i in todo_items
 			todo.attributes.i = i
 
-		# log todo_items
+		
 		if @state.filter_dates
-			# console.log todo_items
 			l = todo_items.length
 			l_m = null
 			l_y = null
 			l_t = null
 			for i in [0...l]
-				# console.log i
 				todo = todo_items[i].attributes
 				if todo.completed_at
 					date = todo.completed_at
@@ -898,7 +888,6 @@ class ListItemView extends Component
 
 class Pin extends Component
 	render: (props)->
-		# console.log props
 		if props.name
 			name = h 'div',
 				className: 'pin-title'
@@ -910,8 +899,6 @@ class Pin extends Component
 		if props.type == 'photo'
 			pin = h 'div',
 				onClick: ()=>
-					# console.log @props
-					# console.log 'ON CLICK'
 					props.onClick()
 				className: 'pin pin-img'
 				style:
@@ -945,8 +932,8 @@ class PinsView extends Component
 		@state = 
 			filter: null
 
-	componentWillRecieveProps: (props)->
-		log props.vuew.show_todo && props.view.show_todo._id,@props.view.show_todo && @props.view.show_todo._id
+	# componentWillRecieveProps: (props)->
+	# 	# log props.vuew.show_todo && props.view.show_todo._id,@props.view.show_todo && @props.view.show_todo._id
 
 	componentWillUpdate: (props,state)->
 		if state.filter != @state.filter
@@ -954,9 +941,7 @@ class PinsView extends Component
 
 
 	render: (props,state)->
-		# log state.reset_grid
 		pins = []
-		# log props
 		if !props.group
 			return
 		
@@ -985,8 +970,6 @@ class PinsView extends Component
 				pin.is_event
 		
 
-
-		# log pins
 		pins = pins.map (pin,i)=>
 			if !pin
 				return null
@@ -997,17 +980,10 @@ class PinsView extends Component
 			h GridItem,
 				w: pin.w
 				h: pin.h
-				key: pin._id
+				key: pin.id
 				i:i
 				h Pin,pin
-		
-		# reset_grid = @state.reset_grid
-		# if @state.reset_grid == true
-		# 	@state.reset_grid = false
 
-		# console.log 'RESET:',reset_grid
-		# console.log pins
-		
 		h Grid,
 			w: 2
 			oclass: 'pins'
@@ -1057,7 +1033,6 @@ class UserLoginView extends Component
 			email: null
 			pass: null
 	render: ()=>
-		console.log 'RENDER',@state.email,@state.pass
 		h Slide,
 			vertical: yes
 			auto: yes
@@ -1311,7 +1286,7 @@ class ModalView extends Component
 				when 'userSettings' then modal_content = h UserSettings,props
 				when 'linkGroup' then modal_content = h LinkGroup,props
 
-		# console.log modal_content
+
 
 		show = !!@props.view.show_modal
 
@@ -1402,8 +1377,6 @@ class UserViewGroupItem extends Component
 		participants = 
 
 		gstate = store.getState()
-		# log participants
-		# participants = sortUsers(participants)
 
 		h Slide,
 			onClick: (e)->
@@ -1443,7 +1416,6 @@ class EditGroupForm extends Component
 		@_input?.focus()
 
 	save: (e)=>
-		console.log @state.remove_users
 		actions.editGroup(@state,@props.group._id)
 		e.preventDefault()
 		e.stopPropagation()
@@ -1626,8 +1598,11 @@ class Menu extends Component
 				width: g.dim
 				center: yes
 				h 'div',
+					onClick: ->
+						actions.setModal('userSettings')
 					className: 'avatar'
 					style:
+						cursor: 'pointer'
 						width: '60%'
 						height: '60%'
 						'background-position': 'center'
@@ -1730,7 +1705,6 @@ class UserView extends Component
 			height: 30
 			title
 	makeGroups: (props)=>
-		# console.log 'make groups'
 		group_items = @props.user.groups.map (g,i)->
 			h GridItem,
 				i:i, w: 2,h: 1,key: g._id,

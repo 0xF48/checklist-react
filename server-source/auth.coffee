@@ -22,7 +22,6 @@ module.exports = (User)->
 			email: email
 		.populate 'groups'
 		.then (user)->
-			# console.log user
 			if !user
 				return done new Error cred_err_msg
 			if !user.auth.local
