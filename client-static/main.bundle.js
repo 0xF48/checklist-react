@@ -2058,19 +2058,15 @@ Overlay = (function(superClass) {
     if (this.ctx == null) {
       return;
     }
-    return TweenLite.to(this.stage, 0.65, {
+    return TweenLite.to(this.stage, 0.3, {
       ease: Power4.easeOut,
-      alpha: enter != null ? enter : {
-        0.8: 1,
-        alpha2: enter != null ? enter : {
-          0.8: 1,
-          onUpdate: (function(_this) {
-            return function() {
-              return _this.renderAngle(_this.stage.alpha, _this.stage.alpha2);
-            };
-          })(this)
-        }
-      }
+      alpha: enter && 0.8 || 1,
+      alpha2: enter && 0.8 || 1,
+      onUpdate: (function(_this) {
+        return function() {
+          return _this.renderAngle(_this.stage.alpha, _this.stage.alpha2);
+        };
+      })(this)
     });
   };
 
@@ -3126,7 +3122,8 @@ AppStore = (function() {
   AppStore.prototype.setModal = function(content) {
     Object.assign(this.state.view, {
       modal_content: content,
-      show_modal: true
+      show_modal: true,
+      show_more_right: false
     });
     return this.setState();
   };
@@ -4748,7 +4745,7 @@ ModalView = (function(superClass) {
   ModalView.prototype.render = function(props, state) {
     var ctn, main_view, modal, modal_color, modal_content, show;
     ctn = props.view.modal_content;
-    modal_color = '#2C3B43';
+    modal_color = '#232E34';
     if (props.modal_content === 'slideshow') {
       modal_color = '#000';
     }
@@ -4927,6 +4924,7 @@ EditGroupForm = (function(superClass) {
   };
 
   EditGroupForm.prototype.save = function(e) {
+    console.log(this.state.remove_users);
     actions.editGroup(this.state, this.props.group._id);
     e.preventDefault();
     e.stopPropagation();
@@ -4963,15 +4961,15 @@ EditGroupForm = (function(superClass) {
           h(User, u), h('div', {
             onClick: (function(i) {
               var r_i;
-              r_i = _this.state.remove_users.indexOf(i);
+              r_i = _this.state.remove_users.indexOf(u._id);
               if (r_i < 0) {
-                _this.state.remove_users.push(i);
+                _this.state.remove_users.push(u._id);
               } else {
                 _this.state.remove_users.splice(r_i, 1);
               }
               return _this.setState();
             }).bind(_this, i),
-            className: cn(_this.state.remove_users.indexOf(i) < 0 && 'hidden' || '', 'user-overlay-delete')
+            className: cn(_this.state.remove_users.indexOf(u._id) < 0 && 'hidden' || '', 'user-overlay-delete')
           }, h('i', {
             className: 'material-icons user-overlay-delete-icon'
           }, 'remove_circle_outline'))
@@ -5131,13 +5129,6 @@ Menu = (function(superClass) {
             show_more_right: true
           });
         };
-      })(this),
-      onMouseLeave: (function(_this) {
-        return function() {
-          return actions.setView({
-            show_more_right: false
-          });
-        };
       })(this)
     });
     if (props.state.user) {
@@ -5266,7 +5257,7 @@ UserView = (function(superClass) {
   UserView.prototype.title = function(title) {
     return h(Slide, {
       className: 'title pad-0-0',
-      height: g.dim
+      height: 30
     }, title);
   };
 
@@ -5323,7 +5314,7 @@ UserView = (function(superClass) {
       scroll: true,
       className: 'pad-50-50'
     }, this.title('my groups:'), h(Grid, {
-      w: 6,
+      w: 8,
       fixed: true,
       max_reached: true
     }, this.makeGroups()), this.title('my friends:'), h(Grid, {
@@ -5631,9 +5622,14 @@ MainView = (function(superClass) {
       vertical: true,
       outer_children: [
         h(Overlay, {
+          dir: 'right',
           strokeStyle: g.light,
           show: props.view.show_more_right,
-          dir: null
+          onClick: function() {
+            return actions.setView({
+              show_more_right: false
+            });
+          }
         })
       ]
     }, menu, h(Slide, {
@@ -5653,13 +5649,6 @@ MainView = (function(superClass) {
         return function() {
           return actions.setView({
             show_more_right: true
-          });
-        };
-      })(this),
-      onMouseLeave: (function(_this) {
-        return function() {
-          return actions.setView({
-            show_more_right: false
           });
         };
       })(this),
@@ -7726,13 +7715,11 @@ Modal = (function(superClass) {
   };
 
   Modal.prototype.update = function() {
-    var ctx, rect;
+    var rect;
     rect = this._content.getBoundingClientRect();
-    this.rect = rect;
-    ctx = this._canvas.getContext('2d');
-    this._canvas.width = this._overlay.clientWidth;
-    this._canvas.height = this._overlay.clientHeight;
-    ctx.fillStyle = this.props.backColor;
+    this._canvas.width = this._overlay._overlay.clientWidth;
+    this._canvas.height = this._overlay._overlay.clientHeight;
+    this.ctx.fillStyle = this.props.backColor;
     this.pos = [
       {
         x: rect.left,
@@ -7748,17 +7735,17 @@ Modal = (function(superClass) {
         y: rect.top + rect.height
       }
     ];
-    return this.draw_rect(ctx);
+    return this.draw_rect(this.ctx);
   };
 
   Modal.prototype.show = function() {
-    var ctx, i, j, r, rect, results, x, y;
+    var i, j, r, rect, results, x, y;
     rect = this._content.getBoundingClientRect();
-    this.rect = rect;
-    ctx = this._canvas.getContext('2d');
+    rect = rect;
+    this.ctx = this._canvas.getContext('2d');
     this._canvas.width = this._overlay._overlay.clientWidth;
     this._canvas.height = this._overlay._overlay.clientHeight;
-    ctx.fillStyle = this.props.backColor;
+    this.ctx.fillStyle = this.props.backColor;
     this.perim = [
       {
         x: rect.left,
@@ -7804,7 +7791,7 @@ Modal = (function(superClass) {
         ease: Elastic.easeOut.config(0.2),
         onUpdate: (function(_this) {
           return function() {
-            return _this.draw_rect(ctx);
+            return _this.draw_rect(_this.ctx);
           };
         })(this)
       }));

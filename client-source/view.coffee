@@ -1291,7 +1291,7 @@ class LinkGroup extends Component
 class ModalView extends Component
 	render: (props,state)=>
 		ctn = props.view.modal_content
-		modal_color =  '#2C3B43'
+		modal_color =  '#232E34'
 		if props.modal_content == 'slideshow'
 			modal_color = '#000'
 
@@ -1443,6 +1443,7 @@ class EditGroupForm extends Component
 		@_input?.focus()
 
 	save: (e)=>
+		console.log @state.remove_users
 		actions.editGroup(@state,@props.group._id)
 		e.preventDefault()
 		e.stopPropagation()
@@ -1478,20 +1479,19 @@ class EditGroupForm extends Component
 					h User,u
 					h 'div',
 						onClick: ((i)=>
-							r_i = @state.remove_users.indexOf(i)
+							r_i = @state.remove_users.indexOf(u._id)
 							if r_i < 0
-								@state.remove_users.push(i)
+								@state.remove_users.push(u._id)
 							else
 								@state.remove_users.splice r_i,1
 
 							@setState()
 
 						).bind(this,i)
-						className: cn(@state.remove_users.indexOf(i) < 0 && 'hidden' || '','user-overlay-delete')
+						className: cn(@state.remove_users.indexOf(u._id) < 0 && 'hidden' || '','user-overlay-delete')
 						h 'i',
 							className: 'material-icons user-overlay-delete-icon'
 							'remove_circle_outline'
-
 				]
 
 	
@@ -1620,9 +1620,6 @@ class Menu extends Component
 			onClick: ()=>
 				actions.setView
 					show_more_right: true
-			onMouseLeave: ()=>
-				actions.setView
-					show_more_right: false
 
 		if props.state.user
 			user_icon = h Slide,
@@ -1730,7 +1727,7 @@ class UserView extends Component
 	title: (title)->
 		h Slide,
 			className: 'title pad-0-0'
-			height: g.dim
+			height: 30
 			title
 	makeGroups: (props)=>
 		# console.log 'make groups'
@@ -1796,7 +1793,7 @@ class UserView extends Component
 			@title 'my groups:'
 		
 			h Grid,
-				w: 6
+				w: 8
 				fixed: yes
 				max_reached: true
 				@makeGroups()
@@ -2072,9 +2069,12 @@ class MainView extends Component
 					vertical: yes
 					outer_children: [
 						h Overlay,
+							dir: 'right'
 							strokeStyle: g.light
 							show: props.view.show_more_right
-							dir: null
+							onClick: ()->
+								actions.setView
+									show_more_right: no
 					]
 
 					menu
@@ -2098,9 +2098,6 @@ class MainView extends Component
 					onMouseEnter: ()=>
 						actions.setView
 							show_more_right: yes
-					onMouseLeave: ()=>
-						actions.setView
-							show_more_right: no
 					vertical: yes
 					@opt('exit_to_app',@logout,'logout')
 					@opt('settings',@goUserSettings,'settings')

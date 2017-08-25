@@ -427,10 +427,27 @@ app
 # 	res.send req.group.getState()
 
 .post '/user/group/:group_id/set', (req,res,next)->
+	# console.log req.group.owner.toString(),req.user.id.toString()
+	if req.group.owner.equals req.user
+		return next new Error 'you are not the owner, you cannot edit this list'
+
+	if req.body.remove_users
+		req.body.remove_users = req.body.remove_users.filter (id)->
+			!(req.user.equals id)
+		req.group.users = req.group.users.filter (u)->
+			console.log u.toString(),req.body.remove_users
+
+
+			# console.log req.body.remove_users.indexOf(u.toString())
+			req.body.remove_users.indexOf(u.toString()) == -1
+		console.log req.group.users
+		# console.log req.group.users
+
 	_.merge req.group,req.body
 	req.group.markModified('state')
-	req.group.save().then ()->
-		res.json getState(req)
+	req.group.save().then ->
+		req.group.populate 'users',()->
+			res.json getState(req)
 
 
 group_auth_error = 'you are either not logged in, this group does not exist, or you are not part of it'

@@ -39,10 +39,10 @@ class Overlay extends Component
 
 	hover: (enter)->
 		if !this.ctx? then return
-		TweenLite.to(this.stage,0.65,{
+		TweenLite.to(this.stage,0.3,{
 			ease: Power4.easeOut,
-			alpha: enter ? 0.8 : 1,
-			alpha2: enter ? 0.8 : 1,
+			alpha: enter && 0.8 || 1,
+			alpha2: enter && 0.8 || 1,
 			onUpdate: ()=>
 				this.renderAngle(this.stage.alpha,this.stage.alpha2)
 		})

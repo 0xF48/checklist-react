@@ -306,6 +306,7 @@ class AppStore
 			# main_view: if content == 'addGroup' then 'home' else @state.main_view
 			modal_content: content
 			show_modal: yes
+			show_more_right: no
 		@setState()
 		
 

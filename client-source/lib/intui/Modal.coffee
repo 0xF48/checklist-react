@@ -25,20 +25,16 @@ class Modal extends Component
 		ctx.clearRect 0,0,@_canvas.clientWidth,@_canvas.clientWidth
 		ctx.beginPath()
 		for i in [0..3]
-			# log @pos[i]
 			ctx.lineTo(@pos[i].x,@pos[i].y)
 		ctx.closePath()
 		ctx.fill()
 
 	update: ()=>
-
+		
 		rect = @_content.getBoundingClientRect()
-		# console.log rect
-		@rect = rect
-		ctx = @_canvas.getContext('2d')
-		@_canvas.width = @_overlay.clientWidth
-		@_canvas.height = @_overlay.clientHeight
-		ctx.fillStyle = @props.backColor
+		@_canvas.width = @_overlay._overlay.clientWidth
+		@_canvas.height = @_overlay._overlay.clientHeight
+		@ctx.fillStyle = @props.backColor
 
 		@pos = [
 			{ x:rect.left, y:rect.top }
@@ -48,8 +44,7 @@ class Modal extends Component
 		]
 
 
-
-		@draw_rect(ctx)
+		@draw_rect(@ctx)
 
 
 
@@ -60,11 +55,11 @@ class Modal extends Component
 		# console.log @root
 		rect = @_content.getBoundingClientRect()
 		# console.log rect
-		@rect = rect
-		ctx = @_canvas.getContext('2d')
+		rect = rect
+		@ctx = @_canvas.getContext('2d')
 		@_canvas.width = @_overlay._overlay.clientWidth
 		@_canvas.height = @_overlay._overlay.clientHeight
-		ctx.fillStyle = @props.backColor
+		@ctx.fillStyle = @props.backColor
 
 		@perim = [
 			{ x:rect.left, y:rect.top }
@@ -98,7 +93,7 @@ class Modal extends Component
 				ease: Elastic.easeOut.config(0.2)
 				onUpdate: ()=>
 					# console.log 'draw'
-					@draw_rect(ctx)			
+					@draw_rect(@ctx)			
 
 
 	componentDidUpdate:(props,state)->
