@@ -91,6 +91,8 @@ app.use '/user/',user_auth
 .post '/user/set', (req,res,next)->	
 	req.user.name = req.body.name || req.user.name
 	req.user.img = req.body.img || req.user.img
+	req.user.thumb = req.body.thumb || req.user.thumb
+
 	req.user.save ()->
 		res.send getState(req,show_modal:false)
 
@@ -209,10 +211,15 @@ makePin = (body)->
 
 
 setGroup = (req,group)->
-	req.session.group = 
-		id: group.id
-	req.group = group
-	req.session.save()
+	new p (res,rej)->
+		group.populate 'users',(g)->
+			# log group.users
+			req.session.group = 
+				id: group.id
+			req.group = group
+			req.session.save()
+			res(true)
+	
 		
 setTodo = (body)->
 	todo = {}
@@ -242,7 +249,7 @@ app
 	regex = new RegExp('^'+req.query.name, 'gi')
 	User.find
 		name: regex
-	.select('_id name img')
+	.select('_id name thumb')
 	.lean()
 	.then (users)->
 		# users = users.map (u)->
@@ -256,19 +263,22 @@ app
 	req.user
 	.joinGroup(req.params.group_invite)
 	.then (group)->
-		console.log 'SET GROUP'
+		# console.log 'SET GROUP'
+		# console.log group
 		setGroup(req,group)
-		req.view.setState
-			main_view: 'group'
-		res.redirect '/'
+		.then ()->
+			req.view.setState
+				main_view: 'group'
+			res.redirect '/'
 	.catch next
 
 
 .get '/user/group/:group_id', (req,res)->
 	setGroup(req,req.group)
-	req.view.setState
-		main_view: 'group'
-	res.json getState(req)
+	.then ()->
+		req.view.setState
+			main_view: 'group'
+		res.json getState(req)
 
 
 .get '/user/group/:group_id/invite_link', (req,res)->
@@ -282,18 +292,41 @@ app
 		res.json getState(req)
 
 .post '/user/group/:group_id/leave', (req,res,next)->
-	if req.group.users.length == 1
-		return next new Error 'cannot leave list, you are the only one left'
-	req.group.users = req.group.users.filter (user)->
-		user.id != req.user.id
+	if req.group.users.length > 1 && req.group.owner == req.user._id
+		return next new Error 'cannot leave list, owner must kick all users before leaving.'
 
-	req.group.save()
+	
+	req.group.users.splice req.group.users.indexOf(req.user._id),1
+	req.user.groups.splice req.user.groups.indexOf(req.group._id),1
+	p.all [
+		req.user.save()
+		req.group.save()
+	]
 	.then ()->
+		req.view.setState
+			main_view: 'user'
 		req.session.group = null
 		req.session.save()
 		req.group = null
 		res.json getState(req)
 
+
+# .post '/user/group/:group_id/user/:group_user_id/kick', (req,res,next)->
+# 	if req.group.owner == req.user._id
+# 		f_id = _.findIndex req.group.users,_id:req.params.group_user_id
+# 		if f_id < 0
+# 			return new Error 'user not found in group, '+req.params.group_user_id
+
+# 		req.group.users.splice(f_id,1)
+# 		req.group.save()
+# 		.then ()->
+# 			res.json getState(req)
+
+# 	else
+# 		return next new Error 'no permissions to remove user from group'
+
+
+	
 
 .post '/user/group/:group_id/addtodo', (req,res,next)->
 	body = req.body
@@ -349,7 +382,7 @@ app
 	req.todo.pins.push pin
 	req.group.markModified('state')
 	req.group.save().then ()->
-		console.log req.group.getState()
+		# console.log req.group.getState()
 		res.json getState(req)
 
 
@@ -380,6 +413,7 @@ app
 
 .post '/user/group/new',(req,res,next)->
 	g = new TodoGroup
+		owner: req.user._id
 		name: req.body.name
 		users: [req.user._id]
 		admins: [req.user._id]
@@ -410,9 +444,10 @@ app
 	.then (group)->
 		if group
 			ok = no
-			for g in req.user.groups
-				if group.id == g.id
+			for u in group.users
+				if u.toString() == req.user.id.toString()
 					ok = yes
+					break
 			if !ok
 				return next new Error group_auth_error
 			req.group = group

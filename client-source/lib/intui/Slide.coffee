@@ -301,6 +301,7 @@ class Slide extends Component
 		class_vert = @props.vert && '-i-s-vertical' || null
 		class_fixed = ( (@props.dim || @props.w || @props.h) && '-i-s-fixed') || null
 		class_reverse = @props.reverse && '-i-s-reverse' || null
+		class_scroll = @props.scroll && '-i-s-scroll' || null
 
 
 		if @props.slide
@@ -323,13 +324,14 @@ class Slide extends Component
 					onKeyDown: @onKeyDown
 					style:@getOuterHW()
 				,@pass_props
-				
-				h 'div',
-					inner_props
-					inner
-				outer
+				[
+					h 'div',
+						inner_props
+						inner
+					@props.outer_children
+				]
 		else
-			outer_class = cn '-i-s-static',@props.class,class_fixed,class_vert,class_center,class_reverse
+			outer_class = cn '-i-s-static',@props.class,class_fixed,class_vert,class_center,class_reverse,class_scroll
 			slide = h 'div',
 				Object.assign 
 					ref: (e)=>
@@ -339,6 +341,7 @@ class Slide extends Component
 					className: outer_class
 				,@pass_props
 				@props.children
+				@props.outer_children
 
 
 		slide
@@ -358,6 +361,7 @@ Slide.defaultProps=
 	vert: no #css flex direction column
 	inverse: no #css flex direction inverse
 	dim: 0
+	scroll: no
 	w: 0
 	h: 0
 	ease: 'cubic-bezier(0.25, 0.34, 0, 1)' #slide easing

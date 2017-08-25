@@ -78,7 +78,7 @@ class editTodoForm extends Component
 		@_input.focus()
 	
 	save: (e)=>
-		actions.editTodo store.state.group._id,@state.todo_id,@state.sub_todo_id,@state
+		actions.editTodo store.state.group._id,@props.view.edit_todo,@state
 		e.preventDefault()
 		e.stopPropagation()
 		return false
@@ -112,7 +112,7 @@ class editTodoForm extends Component
 				onClick: @save
 				label: 'save'
 			h Button,
-				dim: g.dim
+				height: g.dim
 				width: g.dim
 				className: 'error btn'
 				onClick: ()=>
@@ -237,7 +237,7 @@ class User extends Component
 		if store.state.user.id == props.id
 			label = h 'div',
 				className: 'profile-self-label'
-		if !@props.img
+		if !@props.thumb
 			icon = h 'i',
 				className: 'material-icons'
 				'person'
@@ -246,13 +246,14 @@ class User extends Component
 			className: 'profile-mini center'
 			h 'div',
 				style:
-					backgroundImage: 'url('+@props.img+')'
+					backgroundImage: 'url('+@props.thumb+')'
 					transform: ''
 				className: 'avatar center'
 				selected
 				icon
 				# label
-			h 'div',
+
+			!@props.hide_name && h 'div',
 				className: 'profile-name'
 				@props.name || 'Anon'
 			
@@ -273,145 +274,14 @@ class Todo extends Component
 			expanded: yes
 
 	subTodos: ()->
+		if !@props.todos
+			return
 		view = store.state.view
 		t_switch_d = null
 		t_switch_d2 = null
-		props = @props
-		h Slide,
-			className: 'todo-sub'
-			auto: yes
-			vertical: yes
-			props.todos.map (todo,i)=>
-
-				hover_sub_left = @state.hover_sub_opt_left[todo.index] || (view.edit_todo && view.edit_todo._id == @props._id and view.edit_todo_sub && view.edit_todo_sub._id == todo._id)
-
-				if todo.completed_at
-					d_str = 'Completed '+ todo.completed_at.toDateString()
-				else
-					d_str = 'Created '+ todo.created_at.toDateString()
-
-				t_date = h 'div',
-					className: cn 'sub created_at', !@state.hover_sub[todo.index] && 'opaque' 
-					d_str
-
-				todo_options_left = h Slide,
-					width: g.dim
-					className: cn 'pin-btn center btn b1',props.completed_at && 'completed' || ''
-					onClick: (e)=>
-						actions.showTodoEditModal(@props,todo)
-						e.preventDefault()
-						e.stopPropagation()
-						return false
-					onMouseEnter: ()=>
-						# log 'ENTER'
-						@state.hover_sub_opt_left[todo.index] = true
-						@setState
-							hover_sub_opt_left: @state.hover_sub_opt_left
-					onMouseLeave: ()=>
-						@state.hover_sub_opt_left[todo.index] = false
-						@setState
-							hover_sub_opt_lef: @state.hover_sub_opt_left
-					h 'i',{className:'material-icons'},'mode_edit'
-				
-			
-				todo_options = h Slide,
-					width: g.dim
-					className: cn 'pin-btn center btn b1',props.completed_at && 'completed' || ''
-					onClick: (e)=>
-						actions.showAddPinModal(@props,todo)
-						# actions.addPin(store.state.group._id,@props._id,todo._id)
-						e.preventDefault()
-						e.stopPropagation()
-					onMouseEnter: ()=>
-						# log 'ENTER'
-						@state.hover_sub_opt[todo.index] = true
-						@setState
-							hover_sub_opt: @state.hover_sub_opt
-					onMouseLeave: ()=>
-						@state.hover_sub_opt[todo.index] = false
-						@setState
-							hover_sub_opt: @state.hover_sub_opt
-					h 'i',{className:'material-icons'},'add'
-
-
-				active = false
-				console.log 
-				if store.state.view.show_todo && store.state.view.show_todo._id == props._id
-					if store.state.view.show_todo_sub && store.state.view.show_todo_sub._id == todo._id
-						active = true
-				
-
-				h Slide, 
-					key: todo._id
-					height: g.dim
-					className: cn 'todo todo-sub-item',todo.completed_at && 'done' || 'undone'
-					vertical: no
-					h Check,
-						hover: @state.hover_sub_opt[todo.index] == true
-						index: todo.index
-						_intui_slide: yes
-						done: !!todo.completed_at
-						onMouseEnter: (e)=>
-							@state.hover_sub_opt_left[todo.index] = true
-							@setState
-								hover_sub_opt_left: @state.hover_sub_opt_left
-						onMouseLeave: (e)=>
-							@state.hover_sub_opt_left[todo.index] = false
-							@setState
-								hover_sub_opt_lef: @state.hover_sub_opt_left
-						onClick: ((todo)=>
-							actions.editTodo store.state.group._id,props._id,todo._id,
-								completed_at: if todo.completed_at instanceof Date then null else new Date()
-						).bind(this,todo)
-
-					h Slide,
-						slide: yes
-						pos: if @state.hover_sub_opt[todo.index] == true then 2 else if hover_sub_left == true then 0 else 1
-						todo_options_left								
-						h Slide,
-							className: 'name'
-							onClick: (e)=>
-								if todo.completed_at
-									return
-								actions.editTodo store.state.group._id,props._id,todo._id,
-									completed_at: new Date()
-							onMouseEnter: (e)=>
-								@state.hover_sub[todo.index] = true
-								@setState
-									hover_sub: @state.hover_sub
-							onMouseLeave: (e)=>
-								@state.hover_sub[todo.index] = false
-								@setState
-									hover_sub: @state.hover_sub
-							h 'span',null,todo.name
-							t_date
-						todo_options
-
-
-							
-								
-					h Button,
-						# className:
-						width: g.dim
-						className: cn 'pin-btn', !active && (!@state.hover_sub[todo.index] && !@state.hover_sub_opt[todo.index]) && 'hidden-pin-btn',active && 'active'
-						onMouseEnter: (e)=>
-							@state.hover_sub_opt[todo.index] = true
-							@setState
-								hover_sub_opt: @state.hover_sub_opt
-						onMouseLeave: (e)=>
-							@state.hover_sub_opt[todo.index] = false
-							@setState
-								hover_sub_opt: @state.hover_sub_opt
-						onClick: (e)=>
-							actions.showPins(@props,todo)
-							e.preventDefault()
-							e.stopPropagation()
-							return false
-						i: todo.completed_at && 'photo_camera' || 'location_on'
-						pre: h 'div',
-							className: 'photo_count'
-							todo.pins.length
-
+	
+		@props.todos.map (todo,i)=>
+			h Todo,todo
 
 	render: (props)->
 		date = 	h 'div',
@@ -432,14 +302,12 @@ class Todo extends Component
 
 		active = false
 		if store.state.view.show_todo && store.state.view.show_todo._id == props._id
-			if !store.state.view.show_todo_sub
-				active = true
+			active = true
 		
 
 		hover_left = @state.hover_opt_left
 		if store.state.view.edit_todo && store.state.view.edit_todo._id == props._id
-			if !store.state.view.edit_todo_sub
-				hover_left = yes
+			hover_left = yes
 
 
 
@@ -469,7 +337,7 @@ class Todo extends Component
 
 		# store_state = store.getState()
 		options_left = [
-				h Slide,
+				!@props.sub && h Slide,
 					width: g.dim
 					className: 'pin-btn center btn b1'
 					onMouseEnter: ()=> 
@@ -527,8 +395,7 @@ class Todo extends Component
 					@setState
 						hover_opt_left: no
 				onClick: ()=>
-					console.log @props.completed_at instanceof Date,@props.completed_at
-					actions.editTodo store.state.group._id,props._id,null,
+					actions.editTodo store.state.group._id,props,
 						completed_at: if @props.completed_at instanceof Date then null else new Date()
 		else
 			check_btn = h ExpandBtn,
@@ -561,7 +428,7 @@ class Todo extends Component
 					@setState
 						expanded: !@state.expanded
 				else if !@props.completed_at
-					actions.editTodo store.state.group._id,@props._id,null,
+					actions.editTodo store.state.group._id,@props,
 						completed_at: if @props.completed_at instanceof Date then null else new Date()
 			className: 'name'
 			h 'span',null,@props.name
@@ -580,7 +447,7 @@ class Todo extends Component
 		# if @state.hover
 		
 		full_todo = h Slide,
-			className: props.completed_at && 'done' || 'undone'
+			className: cn 'todo',props.completed_at && 'done' || 'undone' 
 			vertical: no
 			slide: no
 			height: g.dim
@@ -610,6 +477,8 @@ class Todo extends Component
 		# 	check_btn
 		# 	name_date
 		# 	show_pins_button
+		
+		# return full_todo
 			
 
 		h Slide,
@@ -621,7 +490,7 @@ class Todo extends Component
 					hover: no
 			key: @props._id
 			vertical: yes
-			className: cn 'todo-wrap',(@props.i%2 == 0 && 'list-alt' || '') ,props.completed_at && 'done' || 'undone'
+			className: cn 'todo-wrap',(@props.i%2 == 0 && 'list-alt' || '') ,props.completed_at && 'done' || 'undone',(@props.sub && 'todo-sub-item' || '')
 			auto: yes
 			full_todo
 			sub_todos
@@ -676,11 +545,11 @@ class addPinForm extends Component
 			# reverse: yes
 			disabled: @props.is_event
 			sClass: ''
-			pClass: 'b3'
+			pClass: 'b0'
 			active: @state.type == type
 			width: g.dim
-			vertical: no
-			reverse: r
+			vertical: yes
+			reverse: no
 			onClick: ()=>
 				@setState
 					type: type
@@ -697,11 +566,33 @@ class addPinForm extends Component
 			f.append 'text',@state.text
 		
 		f.append 'type',@state.type
-		actions.addPin(store.state.group._id,@props.view.edit_todo._id,@props.view.edit_todo_sub && @props.view.edit_todo_sub._id,f,@state)
-		@state.files = null
-		@state.name = null
-		@state.text = null
-		@state.link = null
+		actions.addPin(store.state.group._id,@props.view.edit_todo,f,@state)
+
+
+	componentWillMount: ()->
+		console.log 'WILL MOUNT'
+		# @state.files = null
+		# @state.name = null
+		# @state.text = null
+		# @state.link = null
+		# @state.type = 'photo'
+		
+		if @props.view.edit_todo_sub
+			is_event = !!@props.view.edit_todo_sub.completed_at
+		else
+			is_event = !!@props.view.edit_todo.completed_at
+		
+		@setState
+			files: null
+			name: null
+			text: null
+			link: null
+			type: 'photo'
+			is_event: is_event
+		
+		# @state.is_event = is_event
+	componentDidMount: ()->
+		@forceUpdate()
 
 
 	render: (props,state)=>
@@ -753,7 +644,6 @@ class addPinForm extends Component
 				className: 'pin-ctx'
 				h InputTextArea,
 					onInput: (e)=>
-						log 'ON TEXT AREA ',e.target.value
 						@setState
 							text: e.target.value
 					ref: (e)=>
@@ -774,15 +664,12 @@ class addPinForm extends Component
 				return false
 			className: 'form pin-form'
 
-			h 'span',
-				className: 'modal-label'
-				h 'span',
-					className: 'modal-label-pre'
-					'pin to: '
-				props.view.edit_todo.name
-			h 'div',
-				className: 'title'
-				title
+			# h 'span',
+			# 	className: 'modal-label'
+			# 	h 'span',
+			# 		className: 'modal-label-pre'
+			# 		'pin to: '
+			# 	props.view.edit_todo.name
 			h Slide,
 				# center: yes
 				vertical: no
@@ -969,7 +856,7 @@ class ListItemView extends Component
 				options
 				h SlideButton,
 					onClick: @showGroupPins
-					outerClassName: 'show-listitem-pins'
+					class: 'show-listitem-pins'
 					sClass: ''
 					pClass: 'b3'
 					width: g.dim
@@ -1023,8 +910,8 @@ class Pin extends Component
 		if props.type == 'photo'
 			pin = h 'div',
 				onClick: ()=>
-					console.log @props
-					console.log 'ON CLICK'
+					# console.log @props
+					# console.log 'ON CLICK'
 					props.onClick()
 				className: 'pin pin-img'
 				style:
@@ -1110,7 +997,7 @@ class PinsView extends Component
 			h GridItem,
 				w: pin.w
 				h: pin.h
-				key: pin.id
+				key: pin._id
 				i:i
 				h Pin,pin
 		
@@ -1119,6 +1006,7 @@ class PinsView extends Component
 		# 	@state.reset_grid = false
 
 		# console.log 'RESET:',reset_grid
+		# console.log pins
 		
 		h Grid,
 			w: 2
@@ -1362,14 +1250,18 @@ class LinkGroup extends Component
 		@setState
 			copied: yes
 	render: =>
-		if !@props.view.group_invite_link
-			return h Slide,
-				center: yes
-				'fetching new link...'
+		# if !@props.view.group_invite_link
+		# 	return h Slide,
+		# 		className: 'modal-link'
+		# 		height: g.dim*2
+		# 		vertical: yes
+		# 		center: yes
+		# 		'fetching new link...'
+		
 		h Slide,
+			height: g.dim*2
 			className: 'modal-link'
 			center: yes
-			auto: yes
 			vertical: yes
 			h 'span',
 				className: 'modal-label'
@@ -1378,13 +1270,13 @@ class LinkGroup extends Component
 					@props.group.name
 			h 'div',
 				className: 'title'
-				'group invite link'
+				!@props.view.group_invite_link && 'fetching new link...' || 'group invite link'
 			h Slide,
 				height: g.dim
 				vertical: no
 				h Slide,
 					className: 'b0 invite-link select'
-					h 'span',className:'select',@props.view.group_invite_link.link
+					h 'span',className:'select',@props.view.group_invite_link?.link
 				h SlideButton,
 					slide_duration: 0.1
 					vertical: no
@@ -1399,7 +1291,7 @@ class LinkGroup extends Component
 class ModalView extends Component
 	render: (props,state)=>
 		ctn = props.view.modal_content
-		modal_color =  '#1f292e'
+		modal_color =  '#2C3B43'
 		if props.modal_content == 'slideshow'
 			modal_color = '#000'
 
@@ -1545,9 +1437,10 @@ class EditGroupForm extends Component
 		super(props)
 		@state=
 			name: props.group.name
+			remove_users: []
 
 	componentDidMount: ->
-		@_input.focus()
+		@_input?.focus()
 
 	save: (e)=>
 		actions.editGroup(@state,@props.group._id)
@@ -1555,7 +1448,53 @@ class EditGroupForm extends Component
 		e.stopPropagation()
 		return false
 
-	render: (props)=>		
+	leave: (e)=>
+		actions.leaveGroup(@props.group._id)
+		e.preventDefault()
+		e.stopPropagation()
+		return false		
+
+	render: (props)=>
+
+
+		if @props.group.owner != @props.user._id
+			return h Button,
+				width: g.dim*5
+				height: g.dim
+				class: 'b0'
+				label: 'leave group'
+				onClick: @leave
+
+
+
+		users = @props.group.users.map (u,i)=>
+			h GridItem,
+				w: 1
+				h: 1
+				key: u._id
+				class: 'center'
+				i:i
+				[
+					h User,u
+					h 'div',
+						onClick: ((i)=>
+							r_i = @state.remove_users.indexOf(i)
+							if r_i < 0
+								@state.remove_users.push(i)
+							else
+								@state.remove_users.splice r_i,1
+
+							@setState()
+
+						).bind(this,i)
+						className: cn(@state.remove_users.indexOf(i) < 0 && 'hidden' || '','user-overlay-delete')
+						h 'i',
+							className: 'material-icons user-overlay-delete-icon'
+							'remove_circle_outline'
+
+				]
+
+	
 		h 'form',
 			onSubmit: @save
 			className: 'form'
@@ -1571,6 +1510,15 @@ class EditGroupForm extends Component
 				type: 'text'
 				label: 'name'
 				value: @state.name
+			h Slide,
+				className: 'title'
+				height: 30
+				'group users:'
+			h Slide,
+				height: g.dim*6
+				h Grid,
+					w: 4
+					users
 			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: yes
@@ -1581,6 +1529,11 @@ class EditGroupForm extends Component
 				vertical: yes
 				onClick: @save
 				label: 'save'
+			h Button,
+				height: g.dim
+				class: 'b0'
+				label: 'leave group'
+				onClick: @leave
 		
 
 
@@ -1634,19 +1587,11 @@ class Menu extends Component
 
 	constructor: (props)->
 		super(props)
-		@state = 
-			show_more_right: no
-	
+		
 	goHome: ()=>
 		actions.goUserHome()
 
-	logout: ()=>
-		@setState
-			show_more_right: no
-		actions.logout()
 
-	goUserSettings: ()->
-		actions.setModal('userSettings')
 
 	opt: (icon,onClick,active,hover,w)->
 		h SlideButton,
@@ -1664,32 +1609,37 @@ class Menu extends Component
 			onClick: onClick
 
 
-	render: (props,state)->
+	render: (props,state)=>
 
 		more_btn_right = h Button,
-			className: cn 'btn btn-rotate',@state.show_more_right && 'btn-rotate-90'
+			className: cn 'btn btn-rotate',@props.show_more_right && 'btn-rotate-90'
 			i: 'more_horiz'
 			# active: @state.show_more
 			disabled: !props.state.user
 			width: g.dim
 			onClick: ()=>
-				@setState
-					show_more_right: !@state.show_more_right
-			# onMouseEnter: ()=>
-			# 	@setState
-			# 		show_more_right: yes
+				actions.setView
+					show_more_right: true
 			onMouseLeave: ()=>
-				@setState
-					show_more_right: no
+				actions.setView
+					show_more_right: false
 
-		main_options = [
-			@opt('home',@goHome,props.state.view.main_view == 'user' || props.state.view.main_view == 'home')
-		]
-
-		main_options_more = [
-			@opt('exit_to_app',@logout)
-			@opt('settings',@goUserSettings)
-		]
+		if props.state.user
+			user_icon = h Slide,
+				width: g.dim
+				center: yes
+				h 'div',
+					className: 'avatar'
+					style:
+						width: '60%'
+						height: '60%'
+						'background-position': 'center'
+						'background-size': 'cover'
+						borderRadius: '50%'
+						backgroundImage: 'url('+props.state.user.thumb+')'
+						transform: ''
+		
+	
 
 		left_options = props.left_options.map (opt)=>
 			if !opt.icon
@@ -1705,29 +1655,14 @@ class Menu extends Component
 			vertical: no	
 			h Slide,
 				beta: 100
+				@opt('home',@goHome,props.state.view.main_view == 'user' || props.state.view.main_view == 'home')
 				left_options
 				props.left_children
 			h Slide,
-				slide: yes
-				vertical: no
-				pos: if @state.show_more_right then 1 else 0
-				h Slide,
-					reverse: yes
-					more_btn_right
-					main_options
-					
-
-				h Slide,
-					auto: yes
-					onMouseEnter: ()=>
-						@setState
-							show_more_right: yes
-					onMouseLeave: ()=>
-						@setState
-							show_more_right: no
-					vertical: no
-					className: 'b1'
-					main_options_more
+				reverse: yes
+				more_btn_right
+				user_icon
+				
 
 
 
@@ -1852,7 +1787,7 @@ class UserView extends Component
 		h Slide,
 			vertical: yes
 			scroll: yes
-			className: 'pad-0-50'
+			className: 'pad-50-50'
 			# h Slide,
 			# 	className: 'pad-0-20'
 			# 	height: g.dim
@@ -1862,7 +1797,7 @@ class UserView extends Component
 		
 			h Grid,
 				w: 6
-				className: 'lists-grid'
+				fixed: yes
 				max_reached: true
 				@makeGroups()
 
@@ -1874,7 +1809,7 @@ class UserView extends Component
 			h Grid,
 				show_loader: no
 				w: 8
-				className: 'lists-grid'
+				fixed: yes
 				max_reached: true
 				friend_items
 
@@ -1885,6 +1820,7 @@ class UserSettings extends Component
 		super(props)
 		if props.user
 			@state = 
+				ok: no
 				name: props.user.name
 				email: props.user.email
 				img: props.user.img
@@ -1903,6 +1839,7 @@ class UserSettings extends Component
 		@setState
 			file: file
 			img: url
+			ok: true
 		# img.onload = ()->
 		# 	dim = getPinWH(img.width,img.height)
 		# 	Object.assign state,dim
@@ -1918,7 +1855,7 @@ class UserSettings extends Component
 	render: =>
 	
 		user = h User,
-			img: @state.img
+			thumb: @state.img
 			name: @state.name
 
 	
@@ -1930,6 +1867,7 @@ class UserSettings extends Component
 			h InputText,
 				onInput: (e)=>
 					@setState
+						ok: e.target.value && yes
 						name: e.target.value
 				ref: (e)=>
 					@_input = e
@@ -1950,7 +1888,8 @@ class UserSettings extends Component
 			h SlideButton,
 				outerClassName: 'input-amount-submit full-w'
 				reverse: no
-				disabled: !@state.name || @state.name == @props.user.name || @state.name.length > MAX_NAME_LENGTH
+				disabled: !@state.ok
+				# disabled: !@state.name || @state.name == @props.user.name || @state.name.length > MAX_NAME_LENGTH || @state.file
 				sClass: 'b2'
 				pClass: 'b3'
 				height: g.dim
@@ -1980,6 +1919,30 @@ class MainView extends Component
 		window.addEventListener 'resize',()=>
 			@forceUpdate()
 
+	opt: (icon,onClick,label)->
+		# h Slide,
+		# 	dim: g.dim
+		# 	vertical: no
+		h SlideButton,
+			# className: 'btn'
+			sClass: 'home-more-btn'
+			pClass: 'b3 home-more-btn'
+			vertical: no
+			dim: g.dim
+			# hover: hover
+			reverse: yes
+			# active_index_offset: 5
+			index_offset: 5
+			i: icon
+			# active: active
+			onClick: onClick
+			label: label
+	
+	logout: ()=>
+		actions.logout()
+
+	goUserSettings: ()->
+		actions.setModal('userSettings')
 
 	render: (props,state)=>
 		# return h Slide,{},'asd'
@@ -2006,7 +1969,7 @@ class MainView extends Component
 
 
 
-		if props.view.main_view == 'group'
+		if props.view.main_view == 'group' && props.group?
 			menu = h Menu,
 				left_options: [
 					h SlideButton,
@@ -2040,7 +2003,7 @@ class MainView extends Component
 						vertical: yes
 						reverse: no
 						# reverse: yes
-						i: 'mode_edit'
+						i: 'settings'
 						active: props.view.modal_content == 'editGroup'
 				]
 				left_children: [
@@ -2053,6 +2016,7 @@ class MainView extends Component
 						className: 'list-count'
 						doneText(props.group.done_count,props.group.total_count)
 				]
+				show_more_right: @props.view.show_more_right
 				state: props
 		
 		else if props.view.main_view == 'user'
@@ -2079,43 +2043,70 @@ class MainView extends Component
 							onClick: ()=>
 								actions.setModal('addFriend')
 				]
-
+				show_more_right: @props.view.show_more_right
 				state: props
 
 
-
-			
 		h Slide,
 			className: 'root-view'
 			vertical: yes
 			slide: yes
 			pos: if props.error then 1 else 0
 			h Slide,
-				beta: 100
-				vertical: yes
-				menu
+				slide: yes
+				vertical: no
+				pos: @props.view.show_more_right && 1 || 0
+				outer_children: [
+					h ModalView,props
+					h Overlay,
+						strokeStyle: g.light
+						show: props.error
+						dir: 'bottom'
+						onClick: ()->
+							actions.setState
+								error: null
+				]
+
 				h Slide,
 					beta: 100
-					slide: yes
-					pos: main_pos
-					ease_dur: 0.3
-					# ease: 'cubic-bezier(0, 0.85, 0.37, 1.01)'
 					vertical: yes
-					h Slide,
-						beta: 100
-						main_top
-					h Slide,
-						beta: 100
-						main_bot
-				h ModalView,props
-				h Overlay,
-					strokeStyle: g.light
-					show: props.error
-					dir: 'bottom'
-					onClick: ()->
-						actions.setState
-							error: null
+					outer_children: [
+						h Overlay,
+							strokeStyle: g.light
+							show: props.view.show_more_right
+							dir: null
+					]
 
+					menu
+					h Slide,
+						beta: 100
+						slide: yes
+						pos: main_pos
+						ease_dur: 0.3
+						# ease: 'cubic-bezier(0, 0.85, 0.37, 1.01)'
+						vertical: yes
+						h Slide,
+							beta: 100
+							main_top
+						h Slide,
+							beta: 100
+							main_bot
+
+				h Slide,
+					dim: g.dim*3
+					class: 'b0'
+					onMouseEnter: ()=>
+						actions.setView
+							show_more_right: yes
+					onMouseLeave: ()=>
+						actions.setView
+							show_more_right: no
+					vertical: yes
+					@opt('exit_to_app',@logout,'logout')
+					@opt('settings',@goUserSettings,'settings')
+				
+
+					
 			h Slide,
 				className: 'error-bg'
 				height: g.dim

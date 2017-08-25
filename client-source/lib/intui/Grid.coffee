@@ -243,7 +243,8 @@ class Grid extends Component
 	getInnerHeight: ()->
 		@getDim() * @state.index_array.length
 
-	offsetChildren: (children)->
+	offsetChildren: (children)=>
+		# console.log @state.index_array
 		
 		arr = @state.index_array
 		dim = @getDim()
@@ -261,6 +262,9 @@ class Grid extends Component
 		if row_bot > arr.length
 			row_bot = arr.length
 
+		if row_top > arr.length
+			row_top = 0
+
 
 		if @state.row_h == row_h && row_n == @state.row_n && row_top == @state.row_top && row_bot == @state.row_bot
 			return @state.display_children
@@ -275,6 +279,7 @@ class Grid extends Component
 
 		display_children = []
 		added = []
+		# console.log arr,@state.index_array
 		for row in [row_top...row_bot]
 			for spot in arr[row]
 				if spot == -1
@@ -292,10 +297,16 @@ class Grid extends Component
 		# console.log 'update grid'
 		# console.log oldProps,newProps
 		if oldProps.children.length != newProps.children.length || oldProps.list_key != newProps.list_key
-			@state.display_children = @offsetChildren(@setChildren(newProps.children))
+			if @props.fixed
+				@state.display_children = @setChildren(newProps.children)
+			else
+				@state.display_children = @offsetChildren(@setChildren(newProps.children))
 
 		if oldProps.append_children.length != newProps.append_children.length
-			@state.display_children = @offsetChildren(@appendChildren(newProps.children))
+			if @props.fixed
+				@appendChildren(newProps.children)
+			else
+				@state.display_children = @offsetChildren(@appendChildren(newProps.children))
 
 
 
@@ -321,7 +332,10 @@ class Grid extends Component
 	componentDidMount: ()->
 		@_outer.addEventListener('scroll', this.onScroll)
 		setTimeout ()=>
-			@state.display_children = @offsetChildren(@setChildren(@props.children))
+			if @props.fixed 
+				@state.display_children = @setChildren(@props.children)
+			else
+				@state.display_children = @offsetChildren(@setChildren(@props.children))
 			@forceUpdate()
 		,0
 
@@ -377,7 +391,7 @@ class Grid extends Component
 			# log @state.child_props
 			c.attributes.r = @state.child_props[c.attributes.i].r
 			c.attributes.c = @state.child_props[c.attributes.i].c
-			c.attributes.show = @childVisible(c)
+			c.attributes.show = if @props.fixed then true else @childVisible(c)
 			# log 'VISIBLE',c.attributes.show
 			
 		# console.log @state
@@ -394,7 +408,7 @@ class Grid extends Component
 			key: @key
 			ref: (e)=>
 				@_outer = e
-			className: "-i-grid #{@props.native_scroll && '-i-grid-scroll'||''} #{@props.oclass || ''}"
+			className: "-i-grid #{@props.fixed && '-i-grid-fixed'||''} #{@props.oclass || @props.class || @props.className}"
 			@props.pre_children
 			el 'div',
 				style:
@@ -412,6 +426,7 @@ Grid.defaultProps =
 	append_children: []
 	children: []
 	pre_children: []
+	fixed: no
 	post_children: []
 	offset_height_factor: 1.5
 	w: 4

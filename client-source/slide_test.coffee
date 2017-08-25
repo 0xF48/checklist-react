@@ -10,7 +10,7 @@ class Test extends Component
 		@state = 
 			pos1: 1
 			pos2: 1
-			grid_items: [0..3].map @gridItem
+			grid_items: [0..100].map @gridItem
 
 	slide1: ()=>
 		@setState
@@ -88,7 +88,7 @@ class Test extends Component
 					h Slide,
 						class: 'b0'
 						h Grid, 
-							w: 8
+							w: 5
 							@state.grid_items
 
 

@@ -75,8 +75,10 @@ class SlideButton extends Component
 		if @props.onMouseLeave then @props.onMouseLeave(e)
 
 	onClick: (e)=>
-		@onMouseLeave(e)
 		if @props.onClick then @props.onClick(e);
+		setTimeout ()=>
+			@onMouseLeave(e)
+		,0
 
 	render: =>
 		# hover = @state.hover
@@ -105,7 +107,7 @@ class SlideButton extends Component
 		# console.log @getPos()
 
 		props = Object.assign {},@props,
-			className: cn('-i-slide-btn',@props.className,@props.disabled && 'disabled'||null)
+			className: cn('-i-slide-btn',@props.class || @props.className,@props.disabled && 'disabled'||null)
 			onMouseEnter: @onMouseEnter
 			onMouseLeave: @onMouseLeave
 			onClick: @onClick

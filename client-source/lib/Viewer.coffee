@@ -21,7 +21,7 @@ class Viewer extends Component
 		# log @_img.style.transform
 
 	imageLoaded: ()=>
-		log 'IMAGE LOADED'
+		# log 'IMAGE LOADED'
 		@setInitialScale()
 
 		if !@_img then return
@@ -159,7 +159,7 @@ class Viewer extends Component
 	componentDidUpdate: (props)->
 		@pos = @_root.getBoundingClientRect()
 	componentDidMount: ()->
-		console.log "VIEWER MOUNTED"
+		# console.log "VIEWER MOUNTED"
 		@state.scale = 1
 		@state.min_scale = 1
 		@pos = @_root.getBoundingClientRect()

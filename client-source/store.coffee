@@ -10,6 +10,7 @@ window.initial_state =
 		side_view: 'pins'
 		show_todo: null
 		slideshow_pin: null
+		show_more_right: no
 		search_users: []
 
 
@@ -39,17 +40,22 @@ isset = (val)->
 	return true
 
 updateDates = (list)->
+	# console.log 'updateDates'
 	for todo in list.state.todos
-		if !(todo.completed_at instanceof Date) && todo.completed_at
+
+		if !(todo.completed_at instanceof Date) && todo.completed_at?
 			todo.completed_at = new Date(todo.completed_at)
-		if !(todo.created_at instanceof Date) && todo.created_at
+		if !(todo.created_at instanceof Date) && todo.created_at?
 			todo.created_at = new Date(todo.created_at)
 		else
 			todo.created_at = new Date(0)
 		for sub in todo.todos
-			if !(sub.completed_at instanceof Date) && sub.completed_at
+			sub.sub = true
+			sub.parent_id = todo._id
+			sub.parent_name = todo.name
+			if !(sub.completed_at instanceof Date) && sub.completed_at?
 				sub.completed_at = new Date(sub.completed_at)
-			if !(sub.created_at instanceof Date) && sub.created_at
+			if !(sub.created_at instanceof Date) && sub.created_at?
 				sub.created_at = new Date(sub.created_at)
 			else
 				sub.created_at = new Date(0)
@@ -85,11 +91,13 @@ for key,val of window.server_state
 
 
 fillData = (state)->
-	# console.log 'FILL DATA'
+	console.log 'FILL DATA'
 	if state.group
 		updateCount(state.group)
 		updateDates(state.group)
 		updateIndices(state.group)
+
+
 	if state.user
 		for g in state.user.groups
 			for todo in g.state.todos
@@ -102,6 +110,20 @@ fillData = (state)->
 			updateDates(g)
 			updateCount(g)
 			updateIndices(g)
+
+
+	if state.group
+		updateDates(state.group)
+		updateCount(state.group)
+		updateIndices(state.group)
+		for todo in state.group.state.todos
+			if state.view.show_todo && todo._id == state.view.show_todo._id
+				state.view.show_todo = todo
+			for sub in todo.todos
+				if state.view.show_todo_sub && sub._id == state.view.show_todo_sub._id
+					state.view.show_todo_sub = sub
+
+
 
 
 	
@@ -141,10 +163,15 @@ class AppStore
 			showError: actions.showError
 			showAddPinModal: actions.showAddPinModal
 			showTodoEditModal: actions.showTodoEditModal
+			setView: actions.setView
 			# setMyUser: actions.setMyUser
 			# editTodoSave: actions.editTodoSave
 			# editListItem: actions.editListItem
 		@state = initial_state
+
+	setView: (view)->
+		Object.assign @state.view,view
+		@setState()
 
 	showTodoEditModal: (view)->
 		Object.assign @state.view,view
@@ -314,6 +341,7 @@ class AppStore
 			parent_todo: null
 			edit_todo_sub: null
 			modal_content: null
+			show_more_right: false
 			show_modal: false			
 		
 		@setState()

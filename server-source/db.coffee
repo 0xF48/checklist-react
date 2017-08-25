@@ -58,6 +58,7 @@ User = db.Schema
 		type: String
 	name: String
 	img: String
+	thumb: String
 	auth:
 		default: {}
 		type: db.Schema.Types.Mixed
@@ -97,8 +98,8 @@ User.methods.joinGroup = (id)->
 				@save()
 				link.group.save()
 			]
-			.then (group)->
-				res(group)
+			.then ()->
+				res(link.group)
 
 
 		
@@ -141,6 +142,9 @@ TodoGroupLink = db.Schema
 
 TodoGroup = db.Schema
 	name: String
+	owner:
+		type:  db.Schema.Types.ObjectId
+		ref: 'User'
 	admins: [{
 		type:  db.Schema.Types.ObjectId
 		ref: 'User'
@@ -184,6 +188,7 @@ TodoGroup.methods.getState = ()->
 	state.users = state.users.map (u)->
 		_id: u._id
 		name: u.name
+		thumb: u.thumb
 	return state
 
 

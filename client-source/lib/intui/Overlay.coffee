@@ -73,7 +73,7 @@ class Overlay extends Component
 
 
 	render: =>
-		if !(@props.dir?) || !@props.dir.match('top|bottom|left|right')
+		if @props.dir? && !@props.dir.match('top|bottom|left|right')
 			throw new Error('Overlay bad direction property')
 
 		if this.props.dir != null && !this.props.disabled

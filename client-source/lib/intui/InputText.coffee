@@ -56,6 +56,8 @@ class InputText extends Component
 		h Input,
 			disabled: @props.disabled
 			label: @props.label
+			onFocus: @onFocus
+			onClick: @onFocus
 			icon: @props.icon
 			className: cn @props.className,@state.focus && 'focus'||null,(@state.focus || @state.value) && 'has-data'||null,@props.icon_labh && '-i-icon-label'||null
 			h 'input', props

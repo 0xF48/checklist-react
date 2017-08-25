@@ -51,7 +51,7 @@ class InputFile extends Component
 	
 		h Input,
 			onClick: @onClick
-			# onFocus: @onFocus
+			onFocus: @onFocus
 			onBlur: @onBlur
 			disabled: @props.disabled
 			label: @props.label

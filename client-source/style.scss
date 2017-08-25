@@ -24,6 +24,11 @@ $error: #de3232;
 $dark-opaque: rgba(0,0,0,0.06);
 
 
+.home-more-btn{
+	justify-content: flex-start;
+    padding-left: 20px;
+}
+
 .home-title{
 	font-family: Merienda;
 	font-size: 80px;
@@ -502,6 +507,10 @@ span{
 
 .todo.done{
 	color: $pink;
+	i{
+		color: $pink;
+	}
+
 }
 .todo.undone:hover{
 	i{
@@ -511,13 +520,13 @@ span{
 
 // .todo-sub-item.
 
-.todo.todo-sub-item{
+.todo-sub-item{
 	padding-left: $dim;
-	&.done{
-		i{
-			color: $pink;
-		}
-	}
+	// &.done{
+	// 	i{
+	// 		color: $pink;
+	// 	}
+	// }
 }
 
 // .todo.todo-sub-item.undone{
@@ -709,6 +718,7 @@ span{
 	max-height: 120px;
 	background:  $b1a;
 	padding: 5px;
+	// border-radius: 5px;
 	cursor: pointer;
 	transition: background 0.3s ease;
 
@@ -731,10 +741,9 @@ span{
 		cursor: pointer;
 		background-position: center;
 		background-size: cover;
-		height: 70px;
-		width: 70px;
-		// border: 2px solid rgba(255, 255, 255, 0.15);
-		border-radius: 50%;	
+		height: 60%;
+		width: 60%;
+		border-radius: 50%;
 	}
 
 	.name{
@@ -825,13 +834,13 @@ span{
 	width: 100%;
 	text-align: center;
 	// top: 0px;
-	line-height: $dim;
+	line-height: 30px;
 	font-weight: 600;
 	text-transform: uppercase;
 	opacity: 0.5;
 }
 .modal{
-	padding: 50px;
+	padding: 20px;
 	// padding-top: 0px;
 
 }
@@ -951,3 +960,28 @@ span{
 	}
 }
 
+
+
+.user-overlay-delete{
+	i{
+		color: red;
+	}
+	cursor: pointer;
+	height: 100%;
+	width: 100%;
+	position: absolute;
+	left: 0;
+	top: 0;
+	background: rgba(23, 26, 28, 0.83);
+	opacity: 1;
+	transition: opacity 0.3s ease;
+	z-index: 10;
+	@include center;
+	&.hidden{
+		opacity: 0;
+	}
+	&:hover{
+		opacity: 1;
+	}
+	
+}

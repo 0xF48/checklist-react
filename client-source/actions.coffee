@@ -43,13 +43,13 @@ sendState = (opt)->
 getPinWH = (width,height)->
 	w = 1
 	h = 1
-	console.log width,height
+	# console.log width,height
 	if width > height * 1.4
 		w = 2
 	else if height > width * 1.4
 		h = 2
 
-	console.log w,h
+	# console.log w,h
 
 	return
 		w: w
@@ -71,6 +71,8 @@ class Actions
 				email: state.email
 				pass: state.pass
 
+	setView: (state)->
+		return state
 
 	login: (state)->
 		sendState 
@@ -90,10 +92,8 @@ class Actions
 
 
 	goUserHome: (state)->
-		@mergeState
-			view:
-				show_todo: null
-				show_todo_sub: null
+		@setView
+			show_todo: null
 		sendState
 			type: 'get'
 			route: 'api/user'
@@ -119,11 +119,11 @@ class Actions
 			state: todo
 		@hideModal()
 	
-	editTodo: (group_id,todo_id,todo_id_sub,state)->
-		if todo_id_sub
-			route = 'api/user/group/'+group_id+'/todo/'+todo_id+'/subtodo/'+todo_id_sub+'/set'
+	editTodo: (group_id,todo,state)->
+		if todo.sub
+			route = 'api/user/group/'+group_id+'/todo/'+todo.parent_id+'/subtodo/'+todo._id+'/set'
 		else
-			route = 'api/user/group/'+group_id+'/todo/'+todo_id+'/set'
+			route = 'api/user/group/'+group_id+'/todo/'+todo._id+'/set'
 
 		sendState
 			type: 'post'
@@ -155,16 +155,15 @@ class Actions
 	showAddPinModal: (todo,sub_todo)->
 		return
 			edit_todo: todo
-			edit_todo_sub: sub_todo
 
 	
-	addPin: (group_id,todo_id,todo_id_sub,form,state)->
+	addPin: (group_id,todo,form,state)->
 		state = Object.assign {},state
 		delete state.files 
-		if todo_id_sub
-			route = '/api/user/group/'+group_id+'/todo/'+todo_id+'/subtodo/'+todo_id_sub+'/addpin'
+		if todo.sub
+			route = '/api/user/group/'+group_id+'/todo/'+todo.parent_id+'/subtodo/'+todo._id+'/addpin'
 		else
-			route = '/api/user/group/'+group_id+'/todo/'+todo_id+'/addpin'
+			route = '/api/user/group/'+group_id+'/todo/'+todo._id+'/addpin'
 		
 		
 		if state.type == 'link'
@@ -257,10 +256,11 @@ class Actions
 			form = new FormData()
 			form.append 'file',state.file
 			uploadImage form,
-			(img_url)->
+			(img)->
 				user = 
 					name: state.name
-					img: img_url
+					img: img.img
+					thumb: img.thumb
 				sendState
 					type: 'post'
 					route: '/api/user/set'
@@ -294,16 +294,23 @@ class Actions
 			route: 'api/user/group/'+id+'/set'
 			state: state
 		@hideModal()
+	
+	leaveGroup: (id)->
+		sendState 
+			type: 'post'
+			route: 'api/user/group/'+id+'/leave'
+		@hideModal()
+
 
 	
 	sendState: (state)->
 		return (dispatch)->
 			sendState state,
 				(state)->
-					console.log "GOT SERVER STATE",state
+					# console.log "GOT SERVER STATE",state
 					dispatch state
 				(error)->
-					console.log "GOT SERVER STATE ERROR",error
+					# console.log "GOT SERVER STATE ERROR",error
 					dispatch
 						# show_modal: false
 						error: error.message
@@ -352,9 +359,8 @@ class Actions
 
 
 
-	showPins: (i1,i2)->
-		show_todo: i1
-		show_todo_sub: i2
+	showPins: (id)->
+		show_todo: id
 	
 
 	setRooomPass: (pass)->
