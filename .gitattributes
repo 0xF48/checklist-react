@@ -1,9 +1,9 @@
-*.sln     -text diff
-*.suo     -text diff
-*.vcxproj -text diff
-*.gif     -text diff
-*.gz      -text diff
-*.ico     -text diff
-*.jpeg    -text diff  
-*.bundle.js -text diff
-client-static/* -text diff
+*.sln     binary
+*.suo     binary
+*.vcxproj binary
+*.gif     binary
+*.gz      binary
+*.ico     binary
+*.jpeg   binary
+*.bundle.js binary
+client-static/* binary
