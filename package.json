@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.coffee",
   "scripts": {
+    "build": "webpack --progress -p",
     "start": "coffee server.coffee",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
