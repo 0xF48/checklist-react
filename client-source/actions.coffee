@@ -100,6 +100,13 @@ class Actions
 
 		@hideModal()
 
+	addFriend: (user)->
+		sendState
+			type: 'post'
+			route: 'api/user/add_friend/'+user._id
+
+		@hideModal()	
+
 
 	addTodo: (state)->
 		todo = 

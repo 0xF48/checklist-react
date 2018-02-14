@@ -12,7 +12,7 @@ $b1a: #243035;
 $b2: hsl($shade, 30%, 30%);
 $b3: #95B4C0;
 
-$pink: #C08F84;
+$pink: #fb6868;
 $undone: #2e4954;
 
 $gain: #1294bf;
@@ -559,9 +559,9 @@ span{
 
 	.name{
 		font-family: 'Roboto Slab', serif;
-		font-size: 16px;
+		font-size: 20px;
 		padding-left: 15px;
-		line-height: $dim;
+		line-height: $dim*2;
 
 	}
 	.created_at{
@@ -714,8 +714,8 @@ span{
 	width: 100%;
 	overflow: hidden;
 	height: 100%;
-	max-width: 120px;
-	max-height: 120px;
+	max-width: 200px;
+	max-height: 200px;
 	background:  $b1a;
 	padding: 5px;
 	// border-radius: 5px;
@@ -937,6 +937,7 @@ span{
 	@include center;
 	height: 100%;
 	width: 100%;
+	margin: 0 auto;
 	cursor: pointer;
 	background: $dark-opaque;
 	transition: background 0.3s ease;

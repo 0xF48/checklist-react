@@ -145,6 +145,21 @@ app.use '/user/',user_auth
 
 
 
+.post '/user/add_friend/:friend_id', (req,res,next)->
+	req.params.friend_id
+
+	fi = _.findIndex req.user.friends,(f)->
+		f.equals req.params.friend_id || f.equals req.user.id
+	log fi
+	if fi > -1
+		return next new Error 'already in friends list'
+	req.user.friends.push req.params.friend_id
+	req.user.save()
+	.then ()->
+		req.user.populate 'friends',()->
+			res.send getState(req,main_view:'user')
+	
+
 
 
 # AUTH

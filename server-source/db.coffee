@@ -7,14 +7,14 @@ auth = require './auth.coffee'
 
 
 db.Promise = p
-db.connect CFG.database,useMongoClient:yes
+db.connect CFG.database
 db.connection.on('error',console.error.bind(console,'connection error'))
 
 expireLinks = ()->
 	TodoGroupLink.remove
 		expires: {$lt:new Date()}
 	.then (ws)->
-		console.log 'removed links: ',ws.result.n
+		console.log 'removed links: ',ws
 
 
 

@@ -33,9 +33,6 @@
 /******/ 	// expose the module cache
 /******/ 	__webpack_require__.c = installedModules;
 /******/
-/******/ 	// identity function for calling harmony imports with the correct context
-/******/ 	__webpack_require__.i = function(value) { return value; };
-/******/
 /******/ 	// define getter function for harmony exports
 /******/ 	__webpack_require__.d = function(exports, name, getter) {
 /******/ 		if(!__webpack_require__.o(exports, name)) {
@@ -63,499 +60,1029 @@
 /******/ 	__webpack_require__.p = "/Users/arxii/Projects/checklist/client-static";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 26);
+/******/ 	return __webpack_require__(__webpack_require__.s = 14);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-!function(global, factory) {
-     true ? factory(exports) : 'function' == typeof define && define.amd ? define([ 'exports' ], factory) : factory(global.preact = global.preact || {});
-}(this, function(exports) {
-    function VNode(nodeName, attributes, children) {
-        this.nodeName = nodeName;
-        this.attributes = attributes;
-        this.children = children;
-        this.key = attributes && attributes.key;
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return h; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createElement", function() { return h; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "cloneElement", function() { return cloneElement; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Component", function() { return Component; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "render", function() { return render; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "rerender", function() { return rerender; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "options", function() { return options; });
+/** Virtual DOM Node */
+function VNode() {}
+
+/** Global options
+ *	@public
+ *	@namespace options {Object}
+ */
+var options = {
+
+	/** If `true`, `prop` changes trigger synchronous component updates.
+  *	@name syncComponentUpdates
+  *	@type Boolean
+  *	@default true
+  */
+	//syncComponentUpdates: true,
+
+	/** Processes all created VNodes.
+  *	@param {VNode} vnode	A newly-created VNode to normalize/process
+  */
+	//vnode(vnode) { }
+
+	/** Hook invoked after a component is mounted. */
+	// afterMount(component) { }
+
+	/** Hook invoked after the DOM is updated with a component's latest render. */
+	// afterUpdate(component) { }
+
+	/** Hook invoked immediately before a component is unmounted. */
+	// beforeUnmount(component) { }
+};
+
+var stack = [];
+
+var EMPTY_CHILDREN = [];
+
+/**
+ * JSX/hyperscript reviver.
+ * @see http://jasonformat.com/wtf-is-jsx
+ * Benchmarks: https://esbench.com/bench/57ee8f8e330ab09900a1a1a0
+ *
+ * Note: this is exported as both `h()` and `createElement()` for compatibility reasons.
+ *
+ * Creates a VNode (virtual DOM element). A tree of VNodes can be used as a lightweight representation
+ * of the structure of a DOM tree. This structure can be realized by recursively comparing it against
+ * the current _actual_ DOM structure, and applying only the differences.
+ *
+ * `h()`/`createElement()` accepts an element name, a list of attributes/props,
+ * and optionally children to append to the element.
+ *
+ * @example The following DOM tree
+ *
+ * `<div id="foo" name="bar">Hello!</div>`
+ *
+ * can be constructed using this function as:
+ *
+ * `h('div', { id: 'foo', name : 'bar' }, 'Hello!');`
+ *
+ * @param {string} nodeName	An element name. Ex: `div`, `a`, `span`, etc.
+ * @param {Object} attributes	Any attributes/props to set on the created element.
+ * @param rest			Additional arguments are taken to be children to append. Can be infinitely nested Arrays.
+ *
+ * @public
+ */
+function h(nodeName, attributes) {
+	var children = EMPTY_CHILDREN,
+	    lastSimple,
+	    child,
+	    simple,
+	    i;
+	for (i = arguments.length; i-- > 2;) {
+		stack.push(arguments[i]);
+	}
+	if (attributes && attributes.children != null) {
+		if (!stack.length) stack.push(attributes.children);
+		delete attributes.children;
+	}
+	while (stack.length) {
+		if ((child = stack.pop()) && child.pop !== undefined) {
+			for (i = child.length; i--;) {
+				stack.push(child[i]);
+			}
+		} else {
+			if (typeof child === 'boolean') child = null;
+
+			if (simple = typeof nodeName !== 'function') {
+				if (child == null) child = '';else if (typeof child === 'number') child = String(child);else if (typeof child !== 'string') simple = false;
+			}
+
+			if (simple && lastSimple) {
+				children[children.length - 1] += child;
+			} else if (children === EMPTY_CHILDREN) {
+				children = [child];
+			} else {
+				children.push(child);
+			}
+
+			lastSimple = simple;
+		}
+	}
+
+	var p = new VNode();
+	p.nodeName = nodeName;
+	p.children = children;
+	p.attributes = attributes == null ? undefined : attributes;
+	p.key = attributes == null ? undefined : attributes.key;
+
+	// if a "vnode hook" is defined, pass every created VNode to it
+	if (options.vnode !== undefined) options.vnode(p);
+
+	return p;
+}
+
+/**
+ *  Copy all properties from `props` onto `obj`.
+ *  @param {Object} obj		Object onto which properties should be copied.
+ *  @param {Object} props	Object from which to copy properties.
+ *  @returns obj
+ *  @private
+ */
+function extend(obj, props) {
+  for (var i in props) {
+    obj[i] = props[i];
+  }return obj;
+}
+
+/**
+ * Call a function asynchronously, as soon as possible. Makes
+ * use of HTML Promise to schedule the callback if available,
+ * otherwise falling back to `setTimeout` (mainly for IE<11).
+ *
+ * @param {Function} callback
+ */
+var defer = typeof Promise == 'function' ? Promise.resolve().then.bind(Promise.resolve()) : setTimeout;
+
+/**
+ * Clones the given VNode, optionally adding attributes/props and replacing its children.
+ * @param {VNode} vnode		The virutal DOM element to clone
+ * @param {Object} props	Attributes/props to add when cloning
+ * @param {VNode} rest		Any additional arguments will be used as replacement children.
+ */
+function cloneElement(vnode, props) {
+  return h(vnode.nodeName, extend(extend({}, vnode.attributes), props), arguments.length > 2 ? [].slice.call(arguments, 2) : vnode.children);
+}
+
+// DOM properties that should NOT have "px" added when numeric
+var IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|ows|mnc|ntw|ine[ch]|zoo|^ord/i;
+
+/** Managed queue of dirty components to be re-rendered */
+
+var items = [];
+
+function enqueueRender(component) {
+	if (!component._dirty && (component._dirty = true) && items.push(component) == 1) {
+		(options.debounceRendering || defer)(rerender);
+	}
+}
+
+function rerender() {
+	var p,
+	    list = items;
+	items = [];
+	while (p = list.pop()) {
+		if (p._dirty) renderComponent(p);
+	}
+}
+
+/**
+ * Check if two nodes are equivalent.
+ *
+ * @param {Node} node			DOM Node to compare
+ * @param {VNode} vnode			Virtual DOM node to compare
+ * @param {boolean} [hyrdating=false]	If true, ignores component constructors when comparing.
+ * @private
+ */
+function isSameNodeType(node, vnode, hydrating) {
+  if (typeof vnode === 'string' || typeof vnode === 'number') {
+    return node.splitText !== undefined;
+  }
+  if (typeof vnode.nodeName === 'string') {
+    return !node._componentConstructor && isNamedNode(node, vnode.nodeName);
+  }
+  return hydrating || node._componentConstructor === vnode.nodeName;
+}
+
+/**
+ * Check if an Element has a given nodeName, case-insensitively.
+ *
+ * @param {Element} node	A DOM Element to inspect the name of.
+ * @param {String} nodeName	Unnormalized name to compare against.
+ */
+function isNamedNode(node, nodeName) {
+  return node.normalizedNodeName === nodeName || node.nodeName.toLowerCase() === nodeName.toLowerCase();
+}
+
+/**
+ * Reconstruct Component-style `props` from a VNode.
+ * Ensures default/fallback values from `defaultProps`:
+ * Own-properties of `defaultProps` not present in `vnode.attributes` are added.
+ *
+ * @param {VNode} vnode
+ * @returns {Object} props
+ */
+function getNodeProps(vnode) {
+  var props = extend({}, vnode.attributes);
+  props.children = vnode.children;
+
+  var defaultProps = vnode.nodeName.defaultProps;
+  if (defaultProps !== undefined) {
+    for (var i in defaultProps) {
+      if (props[i] === undefined) {
+        props[i] = defaultProps[i];
+      }
     }
-    function h(nodeName, attributes) {
-        var children, lastSimple, child, simple, i;
-        for (i = arguments.length; i-- > 2; ) stack.push(arguments[i]);
-        if (attributes && attributes.children) {
-            if (!stack.length) stack.push(attributes.children);
-            delete attributes.children;
-        }
-        while (stack.length) if ((child = stack.pop()) instanceof Array) for (i = child.length; i--; ) stack.push(child[i]); else if (null != child && child !== !0 && child !== !1) {
-            if ('number' == typeof child) child = String(child);
-            simple = 'string' == typeof child;
-            if (simple && lastSimple) children[children.length - 1] += child; else {
-                (children || (children = [])).push(child);
-                lastSimple = simple;
-            }
-        }
-        var p = new VNode(nodeName, attributes || void 0, children || EMPTY_CHILDREN);
-        if (options.vnode) options.vnode(p);
-        return p;
-    }
-    function extend(obj, props) {
-        if (props) for (var i in props) obj[i] = props[i];
-        return obj;
-    }
-    function clone(obj) {
-        return extend({}, obj);
-    }
-    function delve(obj, key) {
-        for (var p = key.split('.'), i = 0; i < p.length && obj; i++) obj = obj[p[i]];
-        return obj;
-    }
-    function isFunction(obj) {
-        return 'function' == typeof obj;
-    }
-    function isString(obj) {
-        return 'string' == typeof obj;
-    }
-    function hashToClassName(c) {
-        var str = '';
-        for (var prop in c) if (c[prop]) {
-            if (str) str += ' ';
-            str += prop;
-        }
-        return str;
-    }
-    function cloneElement(vnode, props) {
-        return h(vnode.nodeName, extend(clone(vnode.attributes), props), arguments.length > 2 ? [].slice.call(arguments, 2) : vnode.children);
-    }
-    function createLinkedState(component, key, eventPath) {
-        var path = key.split('.');
-        return function(e) {
-            var t = e && e.target || this, state = {}, obj = state, v = isString(eventPath) ? delve(e, eventPath) : t.nodeName ? t.type.match(/^che|rad/) ? t.checked : t.value : e, i = 0;
-            for (;i < path.length - 1; i++) obj = obj[path[i]] || (obj[path[i]] = !i && component.state[path[i]] || {});
-            obj[path[i]] = v;
-            component.setState(state);
-        };
-    }
-    function enqueueRender(component) {
-        if (!component._dirty && (component._dirty = !0) && 1 == items.push(component)) (options.debounceRendering || defer)(rerender);
-    }
-    function rerender() {
-        var p, list = items;
-        items = [];
-        while (p = list.pop()) if (p._dirty) renderComponent(p);
-    }
-    function isFunctionalComponent(vnode) {
-        var nodeName = vnode && vnode.nodeName;
-        return nodeName && isFunction(nodeName) && !(nodeName.prototype && nodeName.prototype.render);
-    }
-    function buildFunctionalComponent(vnode, context) {
-        return vnode.nodeName(getNodeProps(vnode), context || EMPTY);
-    }
-    function isSameNodeType(node, vnode) {
-        if (isString(vnode)) return node instanceof Text;
-        if (isString(vnode.nodeName)) return !node._componentConstructor && isNamedNode(node, vnode.nodeName);
-        if (isFunction(vnode.nodeName)) return (node._componentConstructor ? node._componentConstructor === vnode.nodeName : !0) || isFunctionalComponent(vnode); else return;
-    }
-    function isNamedNode(node, nodeName) {
-        return node.normalizedNodeName === nodeName || toLowerCase(node.nodeName) === toLowerCase(nodeName);
-    }
-    function getNodeProps(vnode) {
-        var props = clone(vnode.attributes);
-        props.children = vnode.children;
-        var defaultProps = vnode.nodeName.defaultProps;
-        if (defaultProps) for (var i in defaultProps) if (void 0 === props[i]) props[i] = defaultProps[i];
-        return props;
-    }
-    function removeNode(node) {
-        var p = node.parentNode;
-        if (p) p.removeChild(node);
-    }
-    function setAccessor(node, name, old, value, isSvg) {
-        if ('className' === name) name = 'class';
-        if ('class' === name && value && 'object' == typeof value) value = hashToClassName(value);
-        if ('key' === name) ; else if ('class' === name && !isSvg) node.className = value || ''; else if ('style' === name) {
-            if (!value || isString(value) || isString(old)) node.style.cssText = value || '';
-            if (value && 'object' == typeof value) {
-                if (!isString(old)) for (var i in old) if (!(i in value)) node.style[i] = '';
-                for (var i in value) node.style[i] = 'number' == typeof value[i] && !NON_DIMENSION_PROPS[i] ? value[i] + 'px' : value[i];
-            }
-        } else if ('dangerouslySetInnerHTML' === name) {
-            if (value) node.innerHTML = value.__html || '';
-        } else if ('o' == name[0] && 'n' == name[1]) {
-            var l = node._listeners || (node._listeners = {});
-            name = toLowerCase(name.substring(2));
-            if (value) {
-                if (!l[name]) node.addEventListener(name, eventProxy, !!NON_BUBBLING_EVENTS[name]);
-            } else if (l[name]) node.removeEventListener(name, eventProxy, !!NON_BUBBLING_EVENTS[name]);
-            l[name] = value;
-        } else if ('list' !== name && 'type' !== name && !isSvg && name in node) {
-            setProperty(node, name, null == value ? '' : value);
-            if (null == value || value === !1) node.removeAttribute(name);
-        } else {
-            var ns = isSvg && name.match(/^xlink\:?(.+)/);
-            if (null == value || value === !1) if (ns) node.removeAttributeNS('http://www.w3.org/1999/xlink', toLowerCase(ns[1])); else node.removeAttribute(name); else if ('object' != typeof value && !isFunction(value)) if (ns) node.setAttributeNS('http://www.w3.org/1999/xlink', toLowerCase(ns[1]), value); else node.setAttribute(name, value);
-        }
-    }
-    function setProperty(node, name, value) {
-        try {
-            node[name] = value;
-        } catch (e) {}
-    }
-    function eventProxy(e) {
-        return this._listeners[e.type](options.event && options.event(e) || e);
-    }
-    function collectNode(node) {
-        removeNode(node);
-        if (node instanceof Element) {
-            node._component = node._componentConstructor = null;
-            var _name = node.normalizedNodeName || toLowerCase(node.nodeName);
-            (nodes[_name] || (nodes[_name] = [])).push(node);
-        }
-    }
-    function createNode(nodeName, isSvg) {
-        var name = toLowerCase(nodeName), node = nodes[name] && nodes[name].pop() || (isSvg ? document.createElementNS('http://www.w3.org/2000/svg', nodeName) : document.createElement(nodeName));
-        node.normalizedNodeName = name;
-        return node;
-    }
-    function flushMounts() {
-        var c;
-        while (c = mounts.pop()) {
-            if (options.afterMount) options.afterMount(c);
-            if (c.componentDidMount) c.componentDidMount();
-        }
-    }
-    function diff(dom, vnode, context, mountAll, parent, componentRoot) {
-        if (!diffLevel++) {
-            isSvgMode = parent && void 0 !== parent.ownerSVGElement;
-            hydrating = dom && !(ATTR_KEY in dom);
-        }
-        var ret = idiff(dom, vnode, context, mountAll);
-        if (parent && ret.parentNode !== parent) parent.appendChild(ret);
-        if (!--diffLevel) {
-            hydrating = !1;
-            if (!componentRoot) flushMounts();
-        }
-        return ret;
-    }
-    function idiff(dom, vnode, context, mountAll) {
-        var ref = vnode && vnode.attributes && vnode.attributes.ref;
-        while (isFunctionalComponent(vnode)) vnode = buildFunctionalComponent(vnode, context);
-        if (null == vnode) vnode = '';
-        if (isString(vnode)) {
-            if (dom && dom instanceof Text && dom.parentNode) {
-                if (dom.nodeValue != vnode) dom.nodeValue = vnode;
-            } else {
-                if (dom) recollectNodeTree(dom);
-                dom = document.createTextNode(vnode);
-            }
-            return dom;
-        }
-        if (isFunction(vnode.nodeName)) return buildComponentFromVNode(dom, vnode, context, mountAll);
-        var out = dom, nodeName = String(vnode.nodeName), prevSvgMode = isSvgMode, vchildren = vnode.children;
-        isSvgMode = 'svg' === nodeName ? !0 : 'foreignObject' === nodeName ? !1 : isSvgMode;
-        if (!dom) out = createNode(nodeName, isSvgMode); else if (!isNamedNode(dom, nodeName)) {
-            out = createNode(nodeName, isSvgMode);
-            while (dom.firstChild) out.appendChild(dom.firstChild);
-            if (dom.parentNode) dom.parentNode.replaceChild(out, dom);
-            recollectNodeTree(dom);
-        }
-        var fc = out.firstChild, props = out[ATTR_KEY];
-        if (!props) {
-            out[ATTR_KEY] = props = {};
-            for (var a = out.attributes, i = a.length; i--; ) props[a[i].name] = a[i].value;
-        }
-        if (!hydrating && vchildren && 1 === vchildren.length && 'string' == typeof vchildren[0] && fc && fc instanceof Text && !fc.nextSibling) {
-            if (fc.nodeValue != vchildren[0]) fc.nodeValue = vchildren[0];
-        } else if (vchildren && vchildren.length || fc) innerDiffNode(out, vchildren, context, mountAll, !!props.dangerouslySetInnerHTML);
-        diffAttributes(out, vnode.attributes, props);
-        if (ref) (props.ref = ref)(out);
-        isSvgMode = prevSvgMode;
-        return out;
-    }
-    function innerDiffNode(dom, vchildren, context, mountAll, absorb) {
-        var j, c, vchild, child, originalChildren = dom.childNodes, children = [], keyed = {}, keyedLen = 0, min = 0, len = originalChildren.length, childrenLen = 0, vlen = vchildren && vchildren.length;
-        if (len) for (var i = 0; i < len; i++) {
-            var _child = originalChildren[i], props = _child[ATTR_KEY], key = vlen ? (c = _child._component) ? c.__key : props ? props.key : null : null;
-            if (null != key) {
-                keyedLen++;
-                keyed[key] = _child;
-            } else if (hydrating || absorb || props || _child instanceof Text) children[childrenLen++] = _child;
-        }
-        if (vlen) for (var i = 0; i < vlen; i++) {
-            vchild = vchildren[i];
-            child = null;
-            var key = vchild.key;
-            if (null != key) {
-                if (keyedLen && key in keyed) {
-                    child = keyed[key];
-                    keyed[key] = void 0;
-                    keyedLen--;
-                }
-            } else if (!child && min < childrenLen) for (j = min; j < childrenLen; j++) {
-                c = children[j];
-                if (c && isSameNodeType(c, vchild)) {
-                    child = c;
-                    children[j] = void 0;
-                    if (j === childrenLen - 1) childrenLen--;
-                    if (j === min) min++;
-                    break;
-                }
-            }
-            child = idiff(child, vchild, context, mountAll);
-            if (child && child !== dom) if (i >= len) dom.appendChild(child); else if (child !== originalChildren[i]) {
-                if (child === originalChildren[i + 1]) removeNode(originalChildren[i]);
-                dom.insertBefore(child, originalChildren[i] || null);
-            }
-        }
-        if (keyedLen) for (var i in keyed) if (keyed[i]) recollectNodeTree(keyed[i]);
-        while (min <= childrenLen) {
-            child = children[childrenLen--];
-            if (child) recollectNodeTree(child);
-        }
-    }
-    function recollectNodeTree(node, unmountOnly) {
-        var component = node._component;
-        if (component) unmountComponent(component, !unmountOnly); else {
-            if (node[ATTR_KEY] && node[ATTR_KEY].ref) node[ATTR_KEY].ref(null);
-            if (!unmountOnly) collectNode(node);
-            var c;
-            while (c = node.lastChild) recollectNodeTree(c, unmountOnly);
-        }
-    }
-    function diffAttributes(dom, attrs, old) {
-        var name;
-        for (name in old) if (!(attrs && name in attrs) && null != old[name]) setAccessor(dom, name, old[name], old[name] = void 0, isSvgMode);
-        if (attrs) for (name in attrs) if (!('children' === name || 'innerHTML' === name || name in old && attrs[name] === ('value' === name || 'checked' === name ? dom[name] : old[name]))) setAccessor(dom, name, old[name], old[name] = attrs[name], isSvgMode);
-    }
-    function collectComponent(component) {
-        var name = component.constructor.name, list = components[name];
-        if (list) list.push(component); else components[name] = [ component ];
-    }
-    function createComponent(Ctor, props, context) {
-        var inst = new Ctor(props, context), list = components[Ctor.name];
-        Component.call(inst, props, context);
-        if (list) for (var i = list.length; i--; ) if (list[i].constructor === Ctor) {
-            inst.nextBase = list[i].nextBase;
-            list.splice(i, 1);
-            break;
-        }
-        return inst;
-    }
-    function setComponentProps(component, props, opts, context, mountAll) {
-        if (!component._disable) {
-            component._disable = !0;
-            if (component.__ref = props.ref) delete props.ref;
-            if (component.__key = props.key) delete props.key;
-            if (!component.base || mountAll) {
-                if (component.componentWillMount) component.componentWillMount();
-            } else if (component.componentWillReceiveProps) component.componentWillReceiveProps(props, context);
-            if (context && context !== component.context) {
-                if (!component.prevContext) component.prevContext = component.context;
-                component.context = context;
-            }
-            if (!component.prevProps) component.prevProps = component.props;
-            component.props = props;
-            component._disable = !1;
-            if (0 !== opts) if (1 === opts || options.syncComponentUpdates !== !1 || !component.base) renderComponent(component, 1, mountAll); else enqueueRender(component);
-            if (component.__ref) component.__ref(component);
-        }
-    }
-    function renderComponent(component, opts, mountAll, isChild) {
-        if (!component._disable) {
-            var skip, rendered, inst, cbase, props = component.props, state = component.state, context = component.context, previousProps = component.prevProps || props, previousState = component.prevState || state, previousContext = component.prevContext || context, isUpdate = component.base, nextBase = component.nextBase, initialBase = isUpdate || nextBase, initialChildComponent = component._component;
-            if (isUpdate) {
-                component.props = previousProps;
-                component.state = previousState;
-                component.context = previousContext;
-                if (2 !== opts && component.shouldComponentUpdate && component.shouldComponentUpdate(props, state, context) === !1) skip = !0; else if (component.componentWillUpdate) component.componentWillUpdate(props, state, context);
-                component.props = props;
-                component.state = state;
-                component.context = context;
-            }
-            component.prevProps = component.prevState = component.prevContext = component.nextBase = null;
-            component._dirty = !1;
-            if (!skip) {
-                if (component.render) rendered = component.render(props, state, context);
-                if (component.getChildContext) context = extend(clone(context), component.getChildContext());
-                while (isFunctionalComponent(rendered)) rendered = buildFunctionalComponent(rendered, context);
-                var toUnmount, base, childComponent = rendered && rendered.nodeName;
-                if (isFunction(childComponent)) {
-                    var childProps = getNodeProps(rendered);
-                    inst = initialChildComponent;
-                    if (inst && inst.constructor === childComponent && childProps.key == inst.__key) setComponentProps(inst, childProps, 1, context); else {
-                        toUnmount = inst;
-                        inst = createComponent(childComponent, childProps, context);
-                        inst.nextBase = inst.nextBase || nextBase;
-                        inst._parentComponent = component;
-                        component._component = inst;
-                        setComponentProps(inst, childProps, 0, context);
-                        renderComponent(inst, 1, mountAll, !0);
-                    }
-                    base = inst.base;
-                } else {
-                    cbase = initialBase;
-                    toUnmount = initialChildComponent;
-                    if (toUnmount) cbase = component._component = null;
-                    if (initialBase || 1 === opts) {
-                        if (cbase) cbase._component = null;
-                        base = diff(cbase, rendered, context, mountAll || !isUpdate, initialBase && initialBase.parentNode, !0);
-                    }
-                }
-                if (initialBase && base !== initialBase && inst !== initialChildComponent) {
-                    var baseParent = initialBase.parentNode;
-                    if (baseParent && base !== baseParent) {
-                        baseParent.replaceChild(base, initialBase);
-                        if (!toUnmount) {
-                            initialBase._component = null;
-                            recollectNodeTree(initialBase);
-                        }
-                    }
-                }
-                if (toUnmount) unmountComponent(toUnmount, base !== initialBase);
-                component.base = base;
-                if (base && !isChild) {
-                    var componentRef = component, t = component;
-                    while (t = t._parentComponent) (componentRef = t).base = base;
-                    base._component = componentRef;
-                    base._componentConstructor = componentRef.constructor;
-                }
-            }
-            if (!isUpdate || mountAll) mounts.unshift(component); else if (!skip) {
-                if (component.componentDidUpdate) component.componentDidUpdate(previousProps, previousState, previousContext);
-                if (options.afterUpdate) options.afterUpdate(component);
-            }
-            var fn, cb = component._renderCallbacks;
-            if (cb) while (fn = cb.pop()) fn.call(component);
-            if (!diffLevel && !isChild) flushMounts();
-        }
-    }
-    function buildComponentFromVNode(dom, vnode, context, mountAll) {
-        var c = dom && dom._component, originalComponent = c, oldDom = dom, isDirectOwner = c && dom._componentConstructor === vnode.nodeName, isOwner = isDirectOwner, props = getNodeProps(vnode);
-        while (c && !isOwner && (c = c._parentComponent)) isOwner = c.constructor === vnode.nodeName;
-        if (c && isOwner && (!mountAll || c._component)) {
-            setComponentProps(c, props, 3, context, mountAll);
-            dom = c.base;
-        } else {
-            if (originalComponent && !isDirectOwner) {
-                unmountComponent(originalComponent, !0);
-                dom = oldDom = null;
-            }
-            c = createComponent(vnode.nodeName, props, context);
-            if (dom && !c.nextBase) {
-                c.nextBase = dom;
-                oldDom = null;
-            }
-            setComponentProps(c, props, 1, context, mountAll);
-            dom = c.base;
-            if (oldDom && dom !== oldDom) {
-                oldDom._component = null;
-                recollectNodeTree(oldDom);
-            }
-        }
-        return dom;
-    }
-    function unmountComponent(component, remove) {
-        if (options.beforeUnmount) options.beforeUnmount(component);
-        var base = component.base;
-        component._disable = !0;
-        if (component.componentWillUnmount) component.componentWillUnmount();
-        component.base = null;
-        var inner = component._component;
-        if (inner) unmountComponent(inner, remove); else if (base) {
-            if (base[ATTR_KEY] && base[ATTR_KEY].ref) base[ATTR_KEY].ref(null);
-            component.nextBase = base;
-            if (remove) {
-                removeNode(base);
-                collectComponent(component);
-            }
-            var c;
-            while (c = base.lastChild) recollectNodeTree(c, !remove);
-        }
-        if (component.__ref) component.__ref(null);
-        if (component.componentDidUnmount) component.componentDidUnmount();
-    }
-    function Component(props, context) {
-        this._dirty = !0;
-        this.context = context;
-        this.props = props;
-        if (!this.state) this.state = {};
-    }
-    function render(vnode, parent, merge) {
-        return diff(merge, vnode, {}, !1, parent);
-    }
-    var options = {};
-    var stack = [];
-    var EMPTY_CHILDREN = [];
-    var lcCache = {};
-    var toLowerCase = function(s) {
-        return lcCache[s] || (lcCache[s] = s.toLowerCase());
-    };
-    var resolved = 'undefined' != typeof Promise && Promise.resolve();
-    var defer = resolved ? function(f) {
-        resolved.then(f);
-    } : setTimeout;
-    var EMPTY = {};
-    var ATTR_KEY = 'undefined' != typeof Symbol ? Symbol.for('preactattr') : '__preactattr_';
-    var NON_DIMENSION_PROPS = {
-        boxFlex: 1,
-        boxFlexGroup: 1,
-        columnCount: 1,
-        fillOpacity: 1,
-        flex: 1,
-        flexGrow: 1,
-        flexPositive: 1,
-        flexShrink: 1,
-        flexNegative: 1,
-        fontWeight: 1,
-        lineClamp: 1,
-        lineHeight: 1,
-        opacity: 1,
-        order: 1,
-        orphans: 1,
-        strokeOpacity: 1,
-        widows: 1,
-        zIndex: 1,
-        zoom: 1
-    };
-    var NON_BUBBLING_EVENTS = {
-        blur: 1,
-        error: 1,
-        focus: 1,
-        load: 1,
-        resize: 1,
-        scroll: 1
-    };
-    var items = [];
-    var nodes = {};
-    var mounts = [];
-    var diffLevel = 0;
-    var isSvgMode = !1;
-    var hydrating = !1;
-    var components = {};
-    extend(Component.prototype, {
-        linkState: function(key, eventPath) {
-            var c = this._linkedStates || (this._linkedStates = {});
-            return c[key + eventPath] || (c[key + eventPath] = createLinkedState(this, key, eventPath));
-        },
-        setState: function(state, callback) {
-            var s = this.state;
-            if (!this.prevState) this.prevState = clone(s);
-            extend(s, isFunction(state) ? state(s, this.props) : state);
-            if (callback) (this._renderCallbacks = this._renderCallbacks || []).push(callback);
-            enqueueRender(this);
-        },
-        forceUpdate: function() {
-            renderComponent(this, 2);
-        },
-        render: function() {}
-    });
-    exports.h = h;
-    exports.cloneElement = cloneElement;
-    exports.Component = Component;
-    exports.render = render;
-    exports.rerender = rerender;
-    exports.options = options;
+  }
+
+  return props;
+}
+
+/** Create an element with the given nodeName.
+ *	@param {String} nodeName
+ *	@param {Boolean} [isSvg=false]	If `true`, creates an element within the SVG namespace.
+ *	@returns {Element} node
+ */
+function createNode(nodeName, isSvg) {
+	var node = isSvg ? document.createElementNS('http://www.w3.org/2000/svg', nodeName) : document.createElement(nodeName);
+	node.normalizedNodeName = nodeName;
+	return node;
+}
+
+/** Remove a child node from its parent if attached.
+ *	@param {Element} node		The node to remove
+ */
+function removeNode(node) {
+	var parentNode = node.parentNode;
+	if (parentNode) parentNode.removeChild(node);
+}
+
+/** Set a named attribute on the given Node, with special behavior for some names and event handlers.
+ *	If `value` is `null`, the attribute/handler will be removed.
+ *	@param {Element} node	An element to mutate
+ *	@param {string} name	The name/key to set, such as an event or attribute name
+ *	@param {any} old	The last value that was set for this name/node pair
+ *	@param {any} value	An attribute value, such as a function to be used as an event handler
+ *	@param {Boolean} isSvg	Are we currently diffing inside an svg?
+ *	@private
+ */
+function setAccessor(node, name, old, value, isSvg) {
+	if (name === 'className') name = 'class';
+
+	if (name === 'key') {
+		// ignore
+	} else if (name === 'ref') {
+		if (old) old(null);
+		if (value) value(node);
+	} else if (name === 'class' && !isSvg) {
+		node.className = value || '';
+	} else if (name === 'style') {
+		if (!value || typeof value === 'string' || typeof old === 'string') {
+			node.style.cssText = value || '';
+		}
+		if (value && typeof value === 'object') {
+			if (typeof old !== 'string') {
+				for (var i in old) {
+					if (!(i in value)) node.style[i] = '';
+				}
+			}
+			for (var i in value) {
+				node.style[i] = typeof value[i] === 'number' && IS_NON_DIMENSIONAL.test(i) === false ? value[i] + 'px' : value[i];
+			}
+		}
+	} else if (name === 'dangerouslySetInnerHTML') {
+		if (value) node.innerHTML = value.__html || '';
+	} else if (name[0] == 'o' && name[1] == 'n') {
+		var useCapture = name !== (name = name.replace(/Capture$/, ''));
+		name = name.toLowerCase().substring(2);
+		if (value) {
+			if (!old) node.addEventListener(name, eventProxy, useCapture);
+		} else {
+			node.removeEventListener(name, eventProxy, useCapture);
+		}
+		(node._listeners || (node._listeners = {}))[name] = value;
+	} else if (name !== 'list' && name !== 'type' && !isSvg && name in node) {
+		setProperty(node, name, value == null ? '' : value);
+		if (value == null || value === false) node.removeAttribute(name);
+	} else {
+		var ns = isSvg && name !== (name = name.replace(/^xlink\:?/, ''));
+		if (value == null || value === false) {
+			if (ns) node.removeAttributeNS('http://www.w3.org/1999/xlink', name.toLowerCase());else node.removeAttribute(name);
+		} else if (typeof value !== 'function') {
+			if (ns) node.setAttributeNS('http://www.w3.org/1999/xlink', name.toLowerCase(), value);else node.setAttribute(name, value);
+		}
+	}
+}
+
+/** Attempt to set a DOM property to the given value.
+ *	IE & FF throw for certain property-value combinations.
+ */
+function setProperty(node, name, value) {
+	try {
+		node[name] = value;
+	} catch (e) {}
+}
+
+/** Proxy an event to hooked event handlers
+ *	@private
+ */
+function eventProxy(e) {
+	return this._listeners[e.type](options.event && options.event(e) || e);
+}
+
+/** Queue of components that have been mounted and are awaiting componentDidMount */
+var mounts = [];
+
+/** Diff recursion count, used to track the end of the diff cycle. */
+var diffLevel = 0;
+
+/** Global flag indicating if the diff is currently within an SVG */
+var isSvgMode = false;
+
+/** Global flag indicating if the diff is performing hydration */
+var hydrating = false;
+
+/** Invoke queued componentDidMount lifecycle methods */
+function flushMounts() {
+	var c;
+	while (c = mounts.pop()) {
+		if (options.afterMount) options.afterMount(c);
+		if (c.componentDidMount) c.componentDidMount();
+	}
+}
+
+/** Apply differences in a given vnode (and it's deep children) to a real DOM Node.
+ *	@param {Element} [dom=null]		A DOM node to mutate into the shape of the `vnode`
+ *	@param {VNode} vnode			A VNode (with descendants forming a tree) representing the desired DOM structure
+ *	@returns {Element} dom			The created/mutated element
+ *	@private
+ */
+function diff(dom, vnode, context, mountAll, parent, componentRoot) {
+	// diffLevel having been 0 here indicates initial entry into the diff (not a subdiff)
+	if (!diffLevel++) {
+		// when first starting the diff, check if we're diffing an SVG or within an SVG
+		isSvgMode = parent != null && parent.ownerSVGElement !== undefined;
+
+		// hydration is indicated by the existing element to be diffed not having a prop cache
+		hydrating = dom != null && !('__preactattr_' in dom);
+	}
+
+	var ret = idiff(dom, vnode, context, mountAll, componentRoot);
+
+	// append the element if its a new parent
+	if (parent && ret.parentNode !== parent) parent.appendChild(ret);
+
+	// diffLevel being reduced to 0 means we're exiting the diff
+	if (! --diffLevel) {
+		hydrating = false;
+		// invoke queued componentDidMount lifecycle methods
+		if (!componentRoot) flushMounts();
+	}
+
+	return ret;
+}
+
+/** Internals of `diff()`, separated to allow bypassing diffLevel / mount flushing. */
+function idiff(dom, vnode, context, mountAll, componentRoot) {
+	var out = dom,
+	    prevSvgMode = isSvgMode;
+
+	// empty values (null, undefined, booleans) render as empty Text nodes
+	if (vnode == null || typeof vnode === 'boolean') vnode = '';
+
+	// Fast case: Strings & Numbers create/update Text nodes.
+	if (typeof vnode === 'string' || typeof vnode === 'number') {
+
+		// update if it's already a Text node:
+		if (dom && dom.splitText !== undefined && dom.parentNode && (!dom._component || componentRoot)) {
+			/* istanbul ignore if */ /* Browser quirk that can't be covered: https://github.com/developit/preact/commit/fd4f21f5c45dfd75151bd27b4c217d8003aa5eb9 */
+			if (dom.nodeValue != vnode) {
+				dom.nodeValue = vnode;
+			}
+		} else {
+			// it wasn't a Text node: replace it with one and recycle the old Element
+			out = document.createTextNode(vnode);
+			if (dom) {
+				if (dom.parentNode) dom.parentNode.replaceChild(out, dom);
+				recollectNodeTree(dom, true);
+			}
+		}
+
+		out['__preactattr_'] = true;
+
+		return out;
+	}
+
+	// If the VNode represents a Component, perform a component diff:
+	var vnodeName = vnode.nodeName;
+	if (typeof vnodeName === 'function') {
+		return buildComponentFromVNode(dom, vnode, context, mountAll);
+	}
+
+	// Tracks entering and exiting SVG namespace when descending through the tree.
+	isSvgMode = vnodeName === 'svg' ? true : vnodeName === 'foreignObject' ? false : isSvgMode;
+
+	// If there's no existing element or it's the wrong type, create a new one:
+	vnodeName = String(vnodeName);
+	if (!dom || !isNamedNode(dom, vnodeName)) {
+		out = createNode(vnodeName, isSvgMode);
+
+		if (dom) {
+			// move children into the replacement node
+			while (dom.firstChild) {
+				out.appendChild(dom.firstChild);
+			} // if the previous Element was mounted into the DOM, replace it inline
+			if (dom.parentNode) dom.parentNode.replaceChild(out, dom);
+
+			// recycle the old element (skips non-Element node types)
+			recollectNodeTree(dom, true);
+		}
+	}
+
+	var fc = out.firstChild,
+	    props = out['__preactattr_'],
+	    vchildren = vnode.children;
+
+	if (props == null) {
+		props = out['__preactattr_'] = {};
+		for (var a = out.attributes, i = a.length; i--;) {
+			props[a[i].name] = a[i].value;
+		}
+	}
+
+	// Optimization: fast-path for elements containing a single TextNode:
+	if (!hydrating && vchildren && vchildren.length === 1 && typeof vchildren[0] === 'string' && fc != null && fc.splitText !== undefined && fc.nextSibling == null) {
+		if (fc.nodeValue != vchildren[0]) {
+			fc.nodeValue = vchildren[0];
+		}
+	}
+	// otherwise, if there are existing or new children, diff them:
+	else if (vchildren && vchildren.length || fc != null) {
+			innerDiffNode(out, vchildren, context, mountAll, hydrating || props.dangerouslySetInnerHTML != null);
+		}
+
+	// Apply attributes/props from VNode to the DOM Element:
+	diffAttributes(out, vnode.attributes, props);
+
+	// restore previous SVG mode: (in case we're exiting an SVG namespace)
+	isSvgMode = prevSvgMode;
+
+	return out;
+}
+
+/** Apply child and attribute changes between a VNode and a DOM Node to the DOM.
+ *	@param {Element} dom			Element whose children should be compared & mutated
+ *	@param {Array} vchildren		Array of VNodes to compare to `dom.childNodes`
+ *	@param {Object} context			Implicitly descendant context object (from most recent `getChildContext()`)
+ *	@param {Boolean} mountAll
+ *	@param {Boolean} isHydrating	If `true`, consumes externally created elements similar to hydration
+ */
+function innerDiffNode(dom, vchildren, context, mountAll, isHydrating) {
+	var originalChildren = dom.childNodes,
+	    children = [],
+	    keyed = {},
+	    keyedLen = 0,
+	    min = 0,
+	    len = originalChildren.length,
+	    childrenLen = 0,
+	    vlen = vchildren ? vchildren.length : 0,
+	    j,
+	    c,
+	    f,
+	    vchild,
+	    child;
+
+	// Build up a map of keyed children and an Array of unkeyed children:
+	if (len !== 0) {
+		for (var i = 0; i < len; i++) {
+			var _child = originalChildren[i],
+			    props = _child['__preactattr_'],
+			    key = vlen && props ? _child._component ? _child._component.__key : props.key : null;
+			if (key != null) {
+				keyedLen++;
+				keyed[key] = _child;
+			} else if (props || (_child.splitText !== undefined ? isHydrating ? _child.nodeValue.trim() : true : isHydrating)) {
+				children[childrenLen++] = _child;
+			}
+		}
+	}
+
+	if (vlen !== 0) {
+		for (var i = 0; i < vlen; i++) {
+			vchild = vchildren[i];
+			child = null;
+
+			// attempt to find a node based on key matching
+			var key = vchild.key;
+			if (key != null) {
+				if (keyedLen && keyed[key] !== undefined) {
+					child = keyed[key];
+					keyed[key] = undefined;
+					keyedLen--;
+				}
+			}
+			// attempt to pluck a node of the same type from the existing children
+			else if (!child && min < childrenLen) {
+					for (j = min; j < childrenLen; j++) {
+						if (children[j] !== undefined && isSameNodeType(c = children[j], vchild, isHydrating)) {
+							child = c;
+							children[j] = undefined;
+							if (j === childrenLen - 1) childrenLen--;
+							if (j === min) min++;
+							break;
+						}
+					}
+				}
+
+			// morph the matched/found/created DOM child to match vchild (deep)
+			child = idiff(child, vchild, context, mountAll);
+
+			f = originalChildren[i];
+			if (child && child !== dom && child !== f) {
+				if (f == null) {
+					dom.appendChild(child);
+				} else if (child === f.nextSibling) {
+					removeNode(f);
+				} else {
+					dom.insertBefore(child, f);
+				}
+			}
+		}
+	}
+
+	// remove unused keyed children:
+	if (keyedLen) {
+		for (var i in keyed) {
+			if (keyed[i] !== undefined) recollectNodeTree(keyed[i], false);
+		}
+	}
+
+	// remove orphaned unkeyed children:
+	while (min <= childrenLen) {
+		if ((child = children[childrenLen--]) !== undefined) recollectNodeTree(child, false);
+	}
+}
+
+/** Recursively recycle (or just unmount) a node and its descendants.
+ *	@param {Node} node						DOM node to start unmount/removal from
+ *	@param {Boolean} [unmountOnly=false]	If `true`, only triggers unmount lifecycle, skips removal
+ */
+function recollectNodeTree(node, unmountOnly) {
+	var component = node._component;
+	if (component) {
+		// if node is owned by a Component, unmount that component (ends up recursing back here)
+		unmountComponent(component);
+	} else {
+		// If the node's VNode had a ref function, invoke it with null here.
+		// (this is part of the React spec, and smart for unsetting references)
+		if (node['__preactattr_'] != null && node['__preactattr_'].ref) node['__preactattr_'].ref(null);
+
+		if (unmountOnly === false || node['__preactattr_'] == null) {
+			removeNode(node);
+		}
+
+		removeChildren(node);
+	}
+}
+
+/** Recollect/unmount all children.
+ *	- we use .lastChild here because it causes less reflow than .firstChild
+ *	- it's also cheaper than accessing the .childNodes Live NodeList
+ */
+function removeChildren(node) {
+	node = node.lastChild;
+	while (node) {
+		var next = node.previousSibling;
+		recollectNodeTree(node, true);
+		node = next;
+	}
+}
+
+/** Apply differences in attributes from a VNode to the given DOM Element.
+ *	@param {Element} dom		Element with attributes to diff `attrs` against
+ *	@param {Object} attrs		The desired end-state key-value attribute pairs
+ *	@param {Object} old			Current/previous attributes (from previous VNode or element's prop cache)
+ */
+function diffAttributes(dom, attrs, old) {
+	var name;
+
+	// remove attributes no longer present on the vnode by setting them to undefined
+	for (name in old) {
+		if (!(attrs && attrs[name] != null) && old[name] != null) {
+			setAccessor(dom, name, old[name], old[name] = undefined, isSvgMode);
+		}
+	}
+
+	// add new & update changed attributes
+	for (name in attrs) {
+		if (name !== 'children' && name !== 'innerHTML' && (!(name in old) || attrs[name] !== (name === 'value' || name === 'checked' ? dom[name] : old[name]))) {
+			setAccessor(dom, name, old[name], old[name] = attrs[name], isSvgMode);
+		}
+	}
+}
+
+/** Retains a pool of Components for re-use, keyed on component name.
+ *	Note: since component names are not unique or even necessarily available, these are primarily a form of sharding.
+ *	@private
+ */
+var components = {};
+
+/** Reclaim a component for later re-use by the recycler. */
+function collectComponent(component) {
+	var name = component.constructor.name;
+	(components[name] || (components[name] = [])).push(component);
+}
+
+/** Create a component. Normalizes differences between PFC's and classful Components. */
+function createComponent(Ctor, props, context) {
+	var list = components[Ctor.name],
+	    inst;
+
+	if (Ctor.prototype && Ctor.prototype.render) {
+		inst = new Ctor(props, context);
+		Component.call(inst, props, context);
+	} else {
+		inst = new Component(props, context);
+		inst.constructor = Ctor;
+		inst.render = doRender;
+	}
+
+	if (list) {
+		for (var i = list.length; i--;) {
+			if (list[i].constructor === Ctor) {
+				inst.nextBase = list[i].nextBase;
+				list.splice(i, 1);
+				break;
+			}
+		}
+	}
+	return inst;
+}
+
+/** The `.render()` method for a PFC backing instance. */
+function doRender(props, state, context) {
+	return this.constructor(props, context);
+}
+
+/** Set a component's `props` (generally derived from JSX attributes).
+ *	@param {Object} props
+ *	@param {Object} [opts]
+ *	@param {boolean} [opts.renderSync=false]	If `true` and {@link options.syncComponentUpdates} is `true`, triggers synchronous rendering.
+ *	@param {boolean} [opts.render=true]			If `false`, no render will be triggered.
+ */
+function setComponentProps(component, props, opts, context, mountAll) {
+	if (component._disable) return;
+	component._disable = true;
+
+	if (component.__ref = props.ref) delete props.ref;
+	if (component.__key = props.key) delete props.key;
+
+	if (!component.base || mountAll) {
+		if (component.componentWillMount) component.componentWillMount();
+	} else if (component.componentWillReceiveProps) {
+		component.componentWillReceiveProps(props, context);
+	}
+
+	if (context && context !== component.context) {
+		if (!component.prevContext) component.prevContext = component.context;
+		component.context = context;
+	}
+
+	if (!component.prevProps) component.prevProps = component.props;
+	component.props = props;
+
+	component._disable = false;
+
+	if (opts !== 0) {
+		if (opts === 1 || options.syncComponentUpdates !== false || !component.base) {
+			renderComponent(component, 1, mountAll);
+		} else {
+			enqueueRender(component);
+		}
+	}
+
+	if (component.__ref) component.__ref(component);
+}
+
+/** Render a Component, triggering necessary lifecycle events and taking High-Order Components into account.
+ *	@param {Component} component
+ *	@param {Object} [opts]
+ *	@param {boolean} [opts.build=false]		If `true`, component will build and store a DOM node if not already associated with one.
+ *	@private
+ */
+function renderComponent(component, opts, mountAll, isChild) {
+	if (component._disable) return;
+
+	var props = component.props,
+	    state = component.state,
+	    context = component.context,
+	    previousProps = component.prevProps || props,
+	    previousState = component.prevState || state,
+	    previousContext = component.prevContext || context,
+	    isUpdate = component.base,
+	    nextBase = component.nextBase,
+	    initialBase = isUpdate || nextBase,
+	    initialChildComponent = component._component,
+	    skip = false,
+	    rendered,
+	    inst,
+	    cbase;
+
+	// if updating
+	if (isUpdate) {
+		component.props = previousProps;
+		component.state = previousState;
+		component.context = previousContext;
+		if (opts !== 2 && component.shouldComponentUpdate && component.shouldComponentUpdate(props, state, context) === false) {
+			skip = true;
+		} else if (component.componentWillUpdate) {
+			component.componentWillUpdate(props, state, context);
+		}
+		component.props = props;
+		component.state = state;
+		component.context = context;
+	}
+
+	component.prevProps = component.prevState = component.prevContext = component.nextBase = null;
+	component._dirty = false;
+
+	if (!skip) {
+		rendered = component.render(props, state, context);
+
+		// context to pass to the child, can be updated via (grand-)parent component
+		if (component.getChildContext) {
+			context = extend(extend({}, context), component.getChildContext());
+		}
+
+		var childComponent = rendered && rendered.nodeName,
+		    toUnmount,
+		    base;
+
+		if (typeof childComponent === 'function') {
+			// set up high order component link
+
+			var childProps = getNodeProps(rendered);
+			inst = initialChildComponent;
+
+			if (inst && inst.constructor === childComponent && childProps.key == inst.__key) {
+				setComponentProps(inst, childProps, 1, context, false);
+			} else {
+				toUnmount = inst;
+
+				component._component = inst = createComponent(childComponent, childProps, context);
+				inst.nextBase = inst.nextBase || nextBase;
+				inst._parentComponent = component;
+				setComponentProps(inst, childProps, 0, context, false);
+				renderComponent(inst, 1, mountAll, true);
+			}
+
+			base = inst.base;
+		} else {
+			cbase = initialBase;
+
+			// destroy high order component link
+			toUnmount = initialChildComponent;
+			if (toUnmount) {
+				cbase = component._component = null;
+			}
+
+			if (initialBase || opts === 1) {
+				if (cbase) cbase._component = null;
+				base = diff(cbase, rendered, context, mountAll || !isUpdate, initialBase && initialBase.parentNode, true);
+			}
+		}
+
+		if (initialBase && base !== initialBase && inst !== initialChildComponent) {
+			var baseParent = initialBase.parentNode;
+			if (baseParent && base !== baseParent) {
+				baseParent.replaceChild(base, initialBase);
+
+				if (!toUnmount) {
+					initialBase._component = null;
+					recollectNodeTree(initialBase, false);
+				}
+			}
+		}
+
+		if (toUnmount) {
+			unmountComponent(toUnmount);
+		}
+
+		component.base = base;
+		if (base && !isChild) {
+			var componentRef = component,
+			    t = component;
+			while (t = t._parentComponent) {
+				(componentRef = t).base = base;
+			}
+			base._component = componentRef;
+			base._componentConstructor = componentRef.constructor;
+		}
+	}
+
+	if (!isUpdate || mountAll) {
+		mounts.unshift(component);
+	} else if (!skip) {
+		// Ensure that pending componentDidMount() hooks of child components
+		// are called before the componentDidUpdate() hook in the parent.
+		// Note: disabled as it causes duplicate hooks, see https://github.com/developit/preact/issues/750
+		// flushMounts();
+
+		if (component.componentDidUpdate) {
+			component.componentDidUpdate(previousProps, previousState, previousContext);
+		}
+		if (options.afterUpdate) options.afterUpdate(component);
+	}
+
+	if (component._renderCallbacks != null) {
+		while (component._renderCallbacks.length) {
+			component._renderCallbacks.pop().call(component);
+		}
+	}
+
+	if (!diffLevel && !isChild) flushMounts();
+}
+
+/** Apply the Component referenced by a VNode to the DOM.
+ *	@param {Element} dom	The DOM node to mutate
+ *	@param {VNode} vnode	A Component-referencing VNode
+ *	@returns {Element} dom	The created/mutated element
+ *	@private
+ */
+function buildComponentFromVNode(dom, vnode, context, mountAll) {
+	var c = dom && dom._component,
+	    originalComponent = c,
+	    oldDom = dom,
+	    isDirectOwner = c && dom._componentConstructor === vnode.nodeName,
+	    isOwner = isDirectOwner,
+	    props = getNodeProps(vnode);
+	while (c && !isOwner && (c = c._parentComponent)) {
+		isOwner = c.constructor === vnode.nodeName;
+	}
+
+	if (c && isOwner && (!mountAll || c._component)) {
+		setComponentProps(c, props, 3, context, mountAll);
+		dom = c.base;
+	} else {
+		if (originalComponent && !isDirectOwner) {
+			unmountComponent(originalComponent);
+			dom = oldDom = null;
+		}
+
+		c = createComponent(vnode.nodeName, props, context);
+		if (dom && !c.nextBase) {
+			c.nextBase = dom;
+			// passing dom/oldDom as nextBase will recycle it if unused, so bypass recycling on L229:
+			oldDom = null;
+		}
+		setComponentProps(c, props, 1, context, mountAll);
+		dom = c.base;
+
+		if (oldDom && dom !== oldDom) {
+			oldDom._component = null;
+			recollectNodeTree(oldDom, false);
+		}
+	}
+
+	return dom;
+}
+
+/** Remove a component from the DOM and recycle it.
+ *	@param {Component} component	The Component instance to unmount
+ *	@private
+ */
+function unmountComponent(component) {
+	if (options.beforeUnmount) options.beforeUnmount(component);
+
+	var base = component.base;
+
+	component._disable = true;
+
+	if (component.componentWillUnmount) component.componentWillUnmount();
+
+	component.base = null;
+
+	// recursively tear down & recollect high-order component children:
+	var inner = component._component;
+	if (inner) {
+		unmountComponent(inner);
+	} else if (base) {
+		if (base['__preactattr_'] && base['__preactattr_'].ref) base['__preactattr_'].ref(null);
+
+		component.nextBase = base;
+
+		removeNode(base);
+		collectComponent(component);
+
+		removeChildren(base);
+	}
+
+	if (component.__ref) component.__ref(null);
+}
+
+/** Base Component class.
+ *	Provides `setState()` and `forceUpdate()`, which trigger rendering.
+ *	@public
+ *
+ *	@example
+ *	class MyFoo extends Component {
+ *		render(props, state) {
+ *			return <div />;
+ *		}
+ *	}
+ */
+function Component(props, context) {
+	this._dirty = true;
+
+	/** @public
+  *	@type {object}
+  */
+	this.context = context;
+
+	/** @public
+  *	@type {object}
+  */
+	this.props = props;
+
+	/** @public
+  *	@type {object}
+  */
+	this.state = this.state || {};
+}
+
+extend(Component.prototype, {
+
+	/** Returns a `boolean` indicating if the component should re-render when receiving the given `props` and `state`.
+  *	@param {object} nextProps
+  *	@param {object} nextState
+  *	@param {object} nextContext
+  *	@returns {Boolean} should the component re-render
+  *	@name shouldComponentUpdate
+  *	@function
+  */
+
+	/** Update component state by copying properties from `state` to `this.state`.
+  *	@param {object} state		A hash of state properties to update with new values
+  *	@param {function} callback	A function to be called once component state is updated
+  */
+	setState: function setState(state, callback) {
+		var s = this.state;
+		if (!this.prevState) this.prevState = extend({}, s);
+		extend(s, typeof state === 'function' ? state(s, this.props) : state);
+		if (callback) (this._renderCallbacks = this._renderCallbacks || []).push(callback);
+		enqueueRender(this);
+	},
+
+
+	/** Immediately perform a synchronous re-render of the component.
+  *	@param {function} callback		A function to be called after component is re-rendered.
+  *	@private
+  */
+	forceUpdate: function forceUpdate(callback) {
+		if (callback) (this._renderCallbacks = this._renderCallbacks || []).push(callback);
+		renderComponent(this, 2);
+	},
+
+
+	/** Accepts `props` and `state`, and returns a new Virtual DOM tree to build.
+  *	Virtual DOM is generally constructed via [JSX](http://jasonformat.com/wtf-is-jsx).
+  *	@param {object} props		Props (eg: JSX attributes) received from parent element/component
+  *	@param {object} state		The component's current state
+  *	@param {object} context		Context object (if a parent component has provided context)
+  *	@returns VNode
+  */
+	render: function render() {}
 });
-//# sourceMappingURL=preact.js.map
+
+/** Render JSX into a `parent` Element.
+ *	@param {VNode} vnode		A (JSX) VNode to render
+ *	@param {Element} parent		DOM element to render into
+ *	@param {Element} [merge]	Attempt to re-use an existing DOM tree rooted at `merge`
+ *	@public
+ *
+ *	@example
+ *	// render a div into <body>:
+ *	render(<div id="hello">hello!</div>, document.body);
+ *
+ *	@example
+ *	// render a "Thing" component into #foo:
+ *	const Thing = ({ name }) => <span>{ name }</span>;
+ *	render(<Thing name="one" />, document.querySelector('#foo'));
+ */
+function render(vnode, parent, merge) {
+  return diff(merge, vnode, {}, false, parent, false);
+}
+
+var preact = {
+	h: h,
+	createElement: h,
+	cloneElement: cloneElement,
+	Component: Component,
+	render: render,
+	rerender: rerender,
+	options: options
+};
+
+
+/* harmony default export */ __webpack_exports__["default"] = (preact);
+//# sourceMappingURL=preact.esm.js.map
+
 
 /***/ }),
 /* 1 */
@@ -602,9 +1129,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		module.exports = classNames;
 	} else if (true) {
 		// register as 'classnames', consistent with npm package name
-		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = function () {
+		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = (function () {
 			return classNames;
-		}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+		}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	} else {
 		window.classNames = classNames;
@@ -744,212 +1271,294 @@ function toComment(sourceMap) {
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
-var stylesInDom = {},
-	memoize = function(fn) {
-		var memo;
-		return function () {
-			if (typeof memo === "undefined") memo = fn.apply(this, arguments);
-			return memo;
-		};
-	},
-	isOldIE = memoize(function() {
-		// Test for IE <= 9 as proposed by Browserhacks
-		// @see http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
-		// Tests for existence of standard globals is to allow style-loader 
-		// to operate correctly into non-standard environments
-		// @see https://github.com/webpack-contrib/style-loader/issues/177
-		return window && document && document.all && !window.atob;
-	}),
-	getElement = (function(fn) {
-		var memo = {};
-		return function(selector) {
-			if (typeof memo[selector] === "undefined") {
-				memo[selector] = fn.call(this, selector);
+
+var stylesInDom = {};
+
+var	memoize = function (fn) {
+	var memo;
+
+	return function () {
+		if (typeof memo === "undefined") memo = fn.apply(this, arguments);
+		return memo;
+	};
+};
+
+var isOldIE = memoize(function () {
+	// Test for IE <= 9 as proposed by Browserhacks
+	// @see http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
+	// Tests for existence of standard globals is to allow style-loader
+	// to operate correctly into non-standard environments
+	// @see https://github.com/webpack-contrib/style-loader/issues/177
+	return window && document && document.all && !window.atob;
+});
+
+var getTarget = function (target) {
+  return document.querySelector(target);
+};
+
+var getElement = (function (fn) {
+	var memo = {};
+
+	return function(target) {
+                // If passing function in options, then use it for resolve "head" element.
+                // Useful for Shadow Root style i.e
+                // {
+                //   insertInto: function () { return document.querySelector("#foo").shadowRoot }
+                // }
+                if (typeof target === 'function') {
+                        return target();
+                }
+                if (typeof memo[target] === "undefined") {
+			var styleTarget = getTarget.call(this, target);
+			// Special case to return head of iframe instead of iframe itself
+			if (window.HTMLIFrameElement && styleTarget instanceof window.HTMLIFrameElement) {
+				try {
+					// This will throw an exception if access to iframe is blocked
+					// due to cross-origin restrictions
+					styleTarget = styleTarget.contentDocument.head;
+				} catch(e) {
+					styleTarget = null;
+				}
 			}
-			return memo[selector]
-		};
-	})(function (styleTarget) {
-		return document.querySelector(styleTarget)
-	}),
-	singletonElement = null,
-	singletonCounter = 0,
-	styleElementsInsertedAtTop = [],
-	fixUrls = __webpack_require__(47);
+			memo[target] = styleTarget;
+		}
+		return memo[target]
+	};
+})();
+
+var singleton = null;
+var	singletonCounter = 0;
+var	stylesInsertedAtTop = [];
+
+var	fixUrls = __webpack_require__(36);
 
 module.exports = function(list, options) {
-	if(typeof DEBUG !== "undefined" && DEBUG) {
-		if(typeof document !== "object") throw new Error("The style-loader cannot be used in a non-browser environment");
+	if (typeof DEBUG !== "undefined" && DEBUG) {
+		if (typeof document !== "object") throw new Error("The style-loader cannot be used in a non-browser environment");
 	}
 
 	options = options || {};
+
 	options.attrs = typeof options.attrs === "object" ? options.attrs : {};
 
 	// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
 	// tags it will allow on a page
-	if (typeof options.singleton === "undefined") options.singleton = isOldIE();
+	if (!options.singleton && typeof options.singleton !== "boolean") options.singleton = isOldIE();
 
 	// By default, add <style> tags to the <head> element
-	if (typeof options.insertInto === "undefined") options.insertInto = "head";
+        if (!options.insertInto) options.insertInto = "head";
 
 	// By default, add <style> tags to the bottom of the target
-	if (typeof options.insertAt === "undefined") options.insertAt = "bottom";
+	if (!options.insertAt) options.insertAt = "bottom";
 
-	var styles = listToStyles(list);
+	var styles = listToStyles(list, options);
+
 	addStylesToDom(styles, options);
 
-	return function update(newList) {
+	return function update (newList) {
 		var mayRemove = [];
-		for(var i = 0; i < styles.length; i++) {
+
+		for (var i = 0; i < styles.length; i++) {
 			var item = styles[i];
 			var domStyle = stylesInDom[item.id];
+
 			domStyle.refs--;
 			mayRemove.push(domStyle);
 		}
+
 		if(newList) {
-			var newStyles = listToStyles(newList);
+			var newStyles = listToStyles(newList, options);
 			addStylesToDom(newStyles, options);
 		}
-		for(var i = 0; i < mayRemove.length; i++) {
+
+		for (var i = 0; i < mayRemove.length; i++) {
 			var domStyle = mayRemove[i];
+
 			if(domStyle.refs === 0) {
-				for(var j = 0; j < domStyle.parts.length; j++)
-					domStyle.parts[j]();
+				for (var j = 0; j < domStyle.parts.length; j++) domStyle.parts[j]();
+
 				delete stylesInDom[domStyle.id];
 			}
 		}
 	};
 };
 
-function addStylesToDom(styles, options) {
-	for(var i = 0; i < styles.length; i++) {
+function addStylesToDom (styles, options) {
+	for (var i = 0; i < styles.length; i++) {
 		var item = styles[i];
 		var domStyle = stylesInDom[item.id];
+
 		if(domStyle) {
 			domStyle.refs++;
+
 			for(var j = 0; j < domStyle.parts.length; j++) {
 				domStyle.parts[j](item.parts[j]);
 			}
+
 			for(; j < item.parts.length; j++) {
 				domStyle.parts.push(addStyle(item.parts[j], options));
 			}
 		} else {
 			var parts = [];
+
 			for(var j = 0; j < item.parts.length; j++) {
 				parts.push(addStyle(item.parts[j], options));
 			}
+
 			stylesInDom[item.id] = {id: item.id, refs: 1, parts: parts};
 		}
 	}
 }
 
-function listToStyles(list) {
+function listToStyles (list, options) {
 	var styles = [];
 	var newStyles = {};
-	for(var i = 0; i < list.length; i++) {
+
+	for (var i = 0; i < list.length; i++) {
 		var item = list[i];
-		var id = item[0];
+		var id = options.base ? item[0] + options.base : item[0];
 		var css = item[1];
 		var media = item[2];
 		var sourceMap = item[3];
 		var part = {css: css, media: media, sourceMap: sourceMap};
-		if(!newStyles[id])
-			styles.push(newStyles[id] = {id: id, parts: [part]});
-		else
-			newStyles[id].parts.push(part);
+
+		if(!newStyles[id]) styles.push(newStyles[id] = {id: id, parts: [part]});
+		else newStyles[id].parts.push(part);
 	}
+
 	return styles;
 }
 
-function insertStyleElement(options, styleElement) {
-	var styleTarget = getElement(options.insertInto)
-	if (!styleTarget) {
+function insertStyleElement (options, style) {
+	var target = getElement(options.insertInto)
+
+	if (!target) {
 		throw new Error("Couldn't find a style target. This probably means that the value for the 'insertInto' parameter is invalid.");
 	}
-	var lastStyleElementInsertedAtTop = styleElementsInsertedAtTop[styleElementsInsertedAtTop.length - 1];
+
+	var lastStyleElementInsertedAtTop = stylesInsertedAtTop[stylesInsertedAtTop.length - 1];
+
 	if (options.insertAt === "top") {
-		if(!lastStyleElementInsertedAtTop) {
-			styleTarget.insertBefore(styleElement, styleTarget.firstChild);
-		} else if(lastStyleElementInsertedAtTop.nextSibling) {
-			styleTarget.insertBefore(styleElement, lastStyleElementInsertedAtTop.nextSibling);
+		if (!lastStyleElementInsertedAtTop) {
+			target.insertBefore(style, target.firstChild);
+		} else if (lastStyleElementInsertedAtTop.nextSibling) {
+			target.insertBefore(style, lastStyleElementInsertedAtTop.nextSibling);
 		} else {
-			styleTarget.appendChild(styleElement);
+			target.appendChild(style);
 		}
-		styleElementsInsertedAtTop.push(styleElement);
+		stylesInsertedAtTop.push(style);
 	} else if (options.insertAt === "bottom") {
-		styleTarget.appendChild(styleElement);
+		target.appendChild(style);
+	} else if (typeof options.insertAt === "object" && options.insertAt.before) {
+		var nextSibling = getElement(options.insertInto + " " + options.insertAt.before);
+		target.insertBefore(style, nextSibling);
 	} else {
-		throw new Error("Invalid value for parameter 'insertAt'. Must be 'top' or 'bottom'.");
+		throw new Error("[Style Loader]\n\n Invalid value for parameter 'insertAt' ('options.insertAt') found.\n Must be 'top', 'bottom', or Object.\n (https://github.com/webpack-contrib/style-loader#insertat)\n");
 	}
 }
 
-function removeStyleElement(styleElement) {
-	styleElement.parentNode.removeChild(styleElement);
-	var idx = styleElementsInsertedAtTop.indexOf(styleElement);
+function removeStyleElement (style) {
+	if (style.parentNode === null) return false;
+	style.parentNode.removeChild(style);
+
+	var idx = stylesInsertedAtTop.indexOf(style);
 	if(idx >= 0) {
-		styleElementsInsertedAtTop.splice(idx, 1);
+		stylesInsertedAtTop.splice(idx, 1);
 	}
 }
 
-function createStyleElement(options) {
-	var styleElement = document.createElement("style");
+function createStyleElement (options) {
+	var style = document.createElement("style");
+
 	options.attrs.type = "text/css";
 
-	attachTagAttrs(styleElement, options.attrs);
-	insertStyleElement(options, styleElement);
-	return styleElement;
+	addAttrs(style, options.attrs);
+	insertStyleElement(options, style);
+
+	return style;
 }
 
-function createLinkElement(options) {
-	var linkElement = document.createElement("link");
+function createLinkElement (options) {
+	var link = document.createElement("link");
+
 	options.attrs.type = "text/css";
 	options.attrs.rel = "stylesheet";
 
-	attachTagAttrs(linkElement, options.attrs);
-	insertStyleElement(options, linkElement);
-	return linkElement;
+	addAttrs(link, options.attrs);
+	insertStyleElement(options, link);
+
+	return link;
 }
 
-function attachTagAttrs(element, attrs) {
+function addAttrs (el, attrs) {
 	Object.keys(attrs).forEach(function (key) {
-		element.setAttribute(key, attrs[key]);
+		el.setAttribute(key, attrs[key]);
 	});
 }
 
-function addStyle(obj, options) {
-	var styleElement, update, remove;
+function addStyle (obj, options) {
+	var style, update, remove, result;
+
+	// If a transform function was defined, run it on the css
+	if (options.transform && obj.css) {
+	    result = options.transform(obj.css);
+
+	    if (result) {
+	    	// If transform returns a value, use that instead of the original css.
+	    	// This allows running runtime transformations on the css.
+	    	obj.css = result;
+	    } else {
+	    	// If the transform function returns a falsy value, don't add this css.
+	    	// This allows conditional loading of css
+	    	return function() {
+	    		// noop
+	    	};
+	    }
+	}
 
 	if (options.singleton) {
 		var styleIndex = singletonCounter++;
-		styleElement = singletonElement || (singletonElement = createStyleElement(options));
-		update = applyToSingletonTag.bind(null, styleElement, styleIndex, false);
-		remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true);
-	} else if(obj.sourceMap &&
+
+		style = singleton || (singleton = createStyleElement(options));
+
+		update = applyToSingletonTag.bind(null, style, styleIndex, false);
+		remove = applyToSingletonTag.bind(null, style, styleIndex, true);
+
+	} else if (
+		obj.sourceMap &&
 		typeof URL === "function" &&
 		typeof URL.createObjectURL === "function" &&
 		typeof URL.revokeObjectURL === "function" &&
 		typeof Blob === "function" &&
-		typeof btoa === "function") {
-		styleElement = createLinkElement(options);
-		update = updateLink.bind(null, styleElement, options);
-		remove = function() {
-			removeStyleElement(styleElement);
-			if(styleElement.href)
-				URL.revokeObjectURL(styleElement.href);
+		typeof btoa === "function"
+	) {
+		style = createLinkElement(options);
+		update = updateLink.bind(null, style, options);
+		remove = function () {
+			removeStyleElement(style);
+
+			if(style.href) URL.revokeObjectURL(style.href);
 		};
 	} else {
-		styleElement = createStyleElement(options);
-		update = applyToTag.bind(null, styleElement);
-		remove = function() {
-			removeStyleElement(styleElement);
+		style = createStyleElement(options);
+		update = applyToTag.bind(null, style);
+		remove = function () {
+			removeStyleElement(style);
 		};
 	}
 
 	update(obj);
 
-	return function updateStyle(newObj) {
-		if(newObj) {
-			if(newObj.css === obj.css && newObj.media === obj.media && newObj.sourceMap === obj.sourceMap)
+	return function updateStyle (newObj) {
+		if (newObj) {
+			if (
+				newObj.css === obj.css &&
+				newObj.media === obj.media &&
+				newObj.sourceMap === obj.sourceMap
+			) {
 				return;
+			}
+
 			update(obj = newObj);
 		} else {
 			remove();
@@ -962,73 +1571,77 @@ var replaceText = (function () {
 
 	return function (index, replacement) {
 		textStore[index] = replacement;
+
 		return textStore.filter(Boolean).join('\n');
 	};
 })();
 
-function applyToSingletonTag(styleElement, index, remove, obj) {
+function applyToSingletonTag (style, index, remove, obj) {
 	var css = remove ? "" : obj.css;
 
-	if (styleElement.styleSheet) {
-		styleElement.styleSheet.cssText = replaceText(index, css);
+	if (style.styleSheet) {
+		style.styleSheet.cssText = replaceText(index, css);
 	} else {
 		var cssNode = document.createTextNode(css);
-		var childNodes = styleElement.childNodes;
-		if (childNodes[index]) styleElement.removeChild(childNodes[index]);
+		var childNodes = style.childNodes;
+
+		if (childNodes[index]) style.removeChild(childNodes[index]);
+
 		if (childNodes.length) {
-			styleElement.insertBefore(cssNode, childNodes[index]);
+			style.insertBefore(cssNode, childNodes[index]);
 		} else {
-			styleElement.appendChild(cssNode);
+			style.appendChild(cssNode);
 		}
 	}
 }
 
-function applyToTag(styleElement, obj) {
+function applyToTag (style, obj) {
 	var css = obj.css;
 	var media = obj.media;
 
 	if(media) {
-		styleElement.setAttribute("media", media)
+		style.setAttribute("media", media)
 	}
 
-	if(styleElement.styleSheet) {
-		styleElement.styleSheet.cssText = css;
+	if(style.styleSheet) {
+		style.styleSheet.cssText = css;
 	} else {
-		while(styleElement.firstChild) {
-			styleElement.removeChild(styleElement.firstChild);
+		while(style.firstChild) {
+			style.removeChild(style.firstChild);
 		}
-		styleElement.appendChild(document.createTextNode(css));
+
+		style.appendChild(document.createTextNode(css));
 	}
 }
 
-function updateLink(linkElement, options, obj) {
+function updateLink (link, options, obj) {
 	var css = obj.css;
 	var sourceMap = obj.sourceMap;
 
-	/* If convertToAbsoluteUrls isn't defined, but sourcemaps are enabled
-	and there is no publicPath defined then lets turn convertToAbsoluteUrls
-	on by default.  Otherwise default to the convertToAbsoluteUrls option
-	directly
+	/*
+		If convertToAbsoluteUrls isn't defined, but sourcemaps are enabled
+		and there is no publicPath defined then lets turn convertToAbsoluteUrls
+		on by default.  Otherwise default to the convertToAbsoluteUrls option
+		directly
 	*/
 	var autoFixUrls = options.convertToAbsoluteUrls === undefined && sourceMap;
 
-	if (options.convertToAbsoluteUrls || autoFixUrls){
+	if (options.convertToAbsoluteUrls || autoFixUrls) {
 		css = fixUrls(css);
 	}
 
-	if(sourceMap) {
+	if (sourceMap) {
 		// http://stackoverflow.com/a/26603875
 		css += "\n/*# sourceMappingURL=data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + " */";
 	}
 
 	var blob = new Blob([css], { type: "text/css" });
 
-	var oldSrc = linkElement.href;
+	var oldSrc = link.href;
 
-	linkElement.href = URL.createObjectURL(blob);
+	link.href = URL.createObjectURL(blob);
 
-	if(oldSrc)
-		URL.revokeObjectURL(oldSrc);
+	if(oldSrc) URL.revokeObjectURL(oldSrc);
 }
 
 
@@ -1349,7 +1962,7 @@ Slide = (function(superClass) {
         })(this),
         className: outer_class,
         onKeyDown: this.onKeyDown,
-        style: this.getOuterHW()
+        style: Object.assign({}, this.props.style, this.getOuterHW())
       }, this.pass_props), [h('div', inner_props, inner), this.props.outer_children]);
     } else {
       outer_class = cn('-i-s-static', this.props["class"], class_fixed, class_vert, class_center, class_reverse, class_scroll);
@@ -1360,7 +1973,7 @@ Slide = (function(superClass) {
           };
         })(this),
         onKeyDown: this.onKeyDown,
-        style: this.getOuterHW(),
+        style: Object.assign({}, this.props.style, this.getOuterHW()),
         className: outer_class
       }, this.pass_props), this.props.children, this.props.outer_children);
     }
@@ -1521,11 +2134,69 @@ function NoopClass() {}
 /* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
+"use strict";
+
+
+function transmitter() {
+  var subscriptions = [];
+  var nowDispatching = false;
+  var toUnsubscribe = {};
+
+  var unsubscribe = function unsubscribe(onChange) {
+    var id = subscriptions.indexOf(onChange);
+    if (id < 0) return;
+    if (nowDispatching) {
+      toUnsubscribe[id] = onChange;
+      return;
+    }
+    subscriptions.splice(id, 1);
+  };
+
+  var subscribe = function subscribe(onChange) {
+    var id = subscriptions.push(onChange);
+    var dispose = function dispose() {
+      return unsubscribe(onChange);
+    };
+    return { dispose: dispose };
+  };
+
+  var publish = function publish() {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    nowDispatching = true;
+    try {
+      subscriptions.forEach(function (subscription, id) {
+        return toUnsubscribe[id] || subscription.apply(undefined, args);
+      });
+    } finally {
+      nowDispatching = false;
+      Object.keys(toUnsubscribe).forEach(function (id) {
+        return unsubscribe(toUnsubscribe[id]);
+      });
+      toUnsubscribe = {};
+    }
+  };
+
+  return {
+    publish: publish,
+    subscribe: subscribe,
+    $subscriptions: subscriptions
+  };
+}
+
+module.exports = transmitter;
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
 var Actions, getPinWH, parseUrl, sendState, uploadImage, uuid;
 
-uuid = __webpack_require__(13);
+uuid = __webpack_require__(9);
 
-parseUrl = __webpack_require__(53);
+parseUrl = __webpack_require__(28);
 
 uploadImage = function(form, res, rej, use_get) {
   return $.ajax({
@@ -1627,6 +2298,14 @@ Actions = (function() {
     sendState({
       type: 'get',
       route: 'api/user'
+    });
+    return this.hideModal();
+  };
+
+  Actions.prototype.addFriend = function(user) {
+    sendState({
+      type: 'post',
+      route: 'api/user/add_friend/' + user._id
     });
     return this.hideModal();
   };
@@ -1951,55 +2630,42 @@ module.exports = alt.createActions(Actions);
 
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var Component, Input, cn, h, ref,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
+var rng = __webpack_require__(26);
+var bytesToUuid = __webpack_require__(27);
 
-__webpack_require__(11);
+function v4(options, buf, offset) {
+  var i = buf && offset || 0;
 
-ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
+  if (typeof(options) == 'string') {
+    buf = options === 'binary' ? new Array(16) : null;
+    options = null;
+  }
+  options = options || {};
 
-cn = __webpack_require__(1);
+  var rnds = options.random || (options.rng || rng)();
 
-Input = (function(superClass) {
-  extend(Input, superClass);
+  // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
+  rnds[6] = (rnds[6] & 0x0f) | 0x40;
+  rnds[8] = (rnds[8] & 0x3f) | 0x80;
 
-  function Input() {
-    return Input.__super__.constructor.apply(this, arguments);
+  // Copy bytes to buffer, if provided
+  if (buf) {
+    for (var ii = 0; ii < 16; ++ii) {
+      buf[i + ii] = rnds[ii];
+    }
   }
 
-  Input.prototype.render = function() {
-    var children, icon, label;
-    if (this.props.label) {
-      label = h('span', {
-        className: 'label'
-      }, this.props.label);
-    }
-    if (this.props.icon) {
-      icon = h('i', {
-        className: 'material-icons'
-      }, this.props.icon);
-    }
-    children = [icon, label].concat(this.props.children);
-    return h('div', {
-      ref: this.props.ref,
-      onClick: this.props.onClick || this.props.onFocus,
-      className: cn('-i-input', this.props.className, this.props.disabled && 'disabled')
-    }, children);
-  };
+  return buf || bytesToUuid(rnds);
+}
 
-  return Input;
-
-})(Component);
-
-module.exports = Input;
+module.exports = v4;
 
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var Component, Overlay, cn, h, ref,
@@ -2007,7 +2673,7 @@ var Component, Overlay, cn, h, ref,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-__webpack_require__(52);
+__webpack_require__(34);
 
 ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
 
@@ -2139,7 +2805,7 @@ module.exports = Overlay;
 
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var Button, Component, Slide, cn, h, ref,
@@ -2147,7 +2813,7 @@ var Button, Component, Slide, cn, h, ref,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-__webpack_require__(48);
+__webpack_require__(37);
 
 Slide = __webpack_require__(5);
 
@@ -2202,149 +2868,140 @@ module.exports = Button;
 
 
 /***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(37);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Input.scss", function() {
-			var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Input.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
+var Component, Input, cn, h, ref;
 
+__webpack_require__(13);
 
-function transmitter() {
-  var subscriptions = [];
-  var nowDispatching = false;
-  var toUnsubscribe = {};
+ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
 
-  var unsubscribe = function unsubscribe(onChange) {
-    var id = subscriptions.indexOf(onChange);
-    if (id < 0) return;
-    if (nowDispatching) {
-      toUnsubscribe[id] = onChange;
-      return;
+cn = __webpack_require__(1);
+
+Input = (function() {
+  function Input() {}
+
+  Input.prototype.render = function() {
+    var children, icon, label;
+    if (this.props.label) {
+      label = h('span', {
+        className: 'label'
+      }, this.props.label);
     }
-    subscriptions.splice(id, 1);
-  };
-
-  var subscribe = function subscribe(onChange) {
-    var id = subscriptions.push(onChange);
-    var dispose = function dispose() {
-      return unsubscribe(onChange);
-    };
-    return { dispose: dispose };
-  };
-
-  var publish = function publish() {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
+    if (this.props.icon) {
+      icon = h('i', {
+        className: 'material-icons'
+      }, this.props.icon);
     }
-
-    nowDispatching = true;
-    try {
-      subscriptions.forEach(function (subscription, id) {
-        return toUnsubscribe[id] || subscription.apply(undefined, args);
-      });
-    } finally {
-      nowDispatching = false;
-      Object.keys(toUnsubscribe).forEach(function (id) {
-        return unsubscribe(toUnsubscribe[id]);
-      });
-      toUnsubscribe = {};
-    }
+    children = [icon, label].concat(this.props.children);
+    return h('div', {
+      ref: this.props.ref,
+      onClick: this.props.onClick || this.props.onFocus,
+      className: cn('-i-input', this.props.className, this.props.disabled && 'disabled')
+    }, children);
   };
 
-  return {
-    publish: publish,
-    subscribe: subscribe,
-    $subscriptions: subscriptions
-  };
-}
+  return Input;
 
-module.exports = transmitter;
+})();
+
+module.exports = Input;
+
 
 /***/ }),
 /* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var rng = __webpack_require__(55);
-var bytesToUuid = __webpack_require__(54);
 
-function v4(options, buf, offset) {
-  var i = buf && offset || 0;
+var content = __webpack_require__(40);
 
-  if (typeof(options) == 'string') {
-    buf = options == 'binary' ? new Array(16) : null;
-    options = null;
-  }
-  options = options || {};
+if(typeof content === 'string') content = [[module.i, content, '']];
 
-  var rnds = options.random || (options.rng || rng)();
+var transform;
+var insertInto;
 
-  // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-  rnds[6] = (rnds[6] & 0x0f) | 0x40;
-  rnds[8] = (rnds[8] & 0x3f) | 0x80;
 
-  // Copy bytes to buffer, if provided
-  if (buf) {
-    for (var ii = 0; ii < 16; ++ii) {
-      buf[i + ii] = rnds[ii];
-    }
-  }
 
-  return buf || bytesToUuid(rnds);
+var options = {"hmr":true}
+
+options.transform = transform
+options.insertInto = undefined;
+
+var update = __webpack_require__(4)(content, options);
+
+if(content.locals) module.exports = content.locals;
+
+if(false) {
+	module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Input.scss", function() {
+		var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Input.scss");
+
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
+	module.hot.dispose(function() { update(); });
 }
-
-module.exports = v4;
-
 
 /***/ }),
 /* 14 */
-/***/ (function(module, exports) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-var g;
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_preact__ = __webpack_require__(0);
+var Alt, View;
 
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
+__webpack_require__(15);
 
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
 
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
 
-module.exports = g;
+window.addEventListener('mousemove', function(e) {
+  g.mouse[0] = e.clientX;
+  return g.mouse[1] = e.clientY;
+});
+
+window.g = {
+  isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
+  colors: ['#aa00ff', '#ff0000', '#0088ff', '#e55c00', '#00d991', '#3600cc', '#bf0000', '#0077b3', '#ff0044', '#00ccff', '#00f2e2', '#d9ca00', '#36cc00', '#bf00b3', '#b27700', '#b20047'],
+  dim: 50,
+  dark: '#171a1c',
+  mouse: [window.innerWidth / 2, window.innerHeight / 2],
+  light: '#fff',
+  slide_duration: 400,
+  small_width: window.innerWidth < 500,
+  origin: 'http://localhost:8787'
+};
+
+Alt = __webpack_require__(16);
+
+window.alt = new Alt();
+
+window.actions = __webpack_require__(8);
+
+window.store = __webpack_require__(32);
+
+View = __webpack_require__(33);
+
+Object(__WEBPACK_IMPORTED_MODULE_0_preact__["render"])(Object(__WEBPACK_IMPORTED_MODULE_0_preact__["h"])(View, {}), document.getElementById('checki'));
+
+__webpack_require__(54);
 
 
 /***/ }),
@@ -2399,9 +3056,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _flux = __webpack_require__(42);
+var _flux = __webpack_require__(17);
 
-var _StateFunctions = __webpack_require__(25);
+var _StateFunctions = __webpack_require__(20);
 
 var StateFunctions = _interopRequireWildcard(_StateFunctions);
 
@@ -2409,7 +3066,7 @@ var _functions = __webpack_require__(2);
 
 var fn = _interopRequireWildcard(_functions);
 
-var _store = __webpack_require__(24);
+var _store = __webpack_require__(21);
 
 var store = _interopRequireWildcard(_store);
 
@@ -2417,7 +3074,7 @@ var _AltUtils = __webpack_require__(6);
 
 var utils = _interopRequireWildcard(_AltUtils);
 
-var _actions = __webpack_require__(21);
+var _actions = __webpack_require__(24);
 
 var _actions2 = _interopRequireDefault(_actions);
 
@@ -2775,11 +3432,1763 @@ module.exports = exports['default'];
 /* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
+/**
+ * Copyright (c) 2014-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
+
+module.exports.Dispatcher = __webpack_require__(18);
+
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/**
+ * Copyright (c) 2014-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule Dispatcher
+ * 
+ * @preventMunge
+ */
+
+
+
+exports.__esModule = true;
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var invariant = __webpack_require__(19);
+
+var _prefix = 'ID_';
+
+/**
+ * Dispatcher is used to broadcast payloads to registered callbacks. This is
+ * different from generic pub-sub systems in two ways:
+ *
+ *   1) Callbacks are not subscribed to particular events. Every payload is
+ *      dispatched to every registered callback.
+ *   2) Callbacks can be deferred in whole or part until other callbacks have
+ *      been executed.
+ *
+ * For example, consider this hypothetical flight destination form, which
+ * selects a default city when a country is selected:
+ *
+ *   var flightDispatcher = new Dispatcher();
+ *
+ *   // Keeps track of which country is selected
+ *   var CountryStore = {country: null};
+ *
+ *   // Keeps track of which city is selected
+ *   var CityStore = {city: null};
+ *
+ *   // Keeps track of the base flight price of the selected city
+ *   var FlightPriceStore = {price: null}
+ *
+ * When a user changes the selected city, we dispatch the payload:
+ *
+ *   flightDispatcher.dispatch({
+ *     actionType: 'city-update',
+ *     selectedCity: 'paris'
+ *   });
+ *
+ * This payload is digested by `CityStore`:
+ *
+ *   flightDispatcher.register(function(payload) {
+ *     if (payload.actionType === 'city-update') {
+ *       CityStore.city = payload.selectedCity;
+ *     }
+ *   });
+ *
+ * When the user selects a country, we dispatch the payload:
+ *
+ *   flightDispatcher.dispatch({
+ *     actionType: 'country-update',
+ *     selectedCountry: 'australia'
+ *   });
+ *
+ * This payload is digested by both stores:
+ *
+ *   CountryStore.dispatchToken = flightDispatcher.register(function(payload) {
+ *     if (payload.actionType === 'country-update') {
+ *       CountryStore.country = payload.selectedCountry;
+ *     }
+ *   });
+ *
+ * When the callback to update `CountryStore` is registered, we save a reference
+ * to the returned token. Using this token with `waitFor()`, we can guarantee
+ * that `CountryStore` is updated before the callback that updates `CityStore`
+ * needs to query its data.
+ *
+ *   CityStore.dispatchToken = flightDispatcher.register(function(payload) {
+ *     if (payload.actionType === 'country-update') {
+ *       // `CountryStore.country` may not be updated.
+ *       flightDispatcher.waitFor([CountryStore.dispatchToken]);
+ *       // `CountryStore.country` is now guaranteed to be updated.
+ *
+ *       // Select the default city for the new country
+ *       CityStore.city = getDefaultCityForCountry(CountryStore.country);
+ *     }
+ *   });
+ *
+ * The usage of `waitFor()` can be chained, for example:
+ *
+ *   FlightPriceStore.dispatchToken =
+ *     flightDispatcher.register(function(payload) {
+ *       switch (payload.actionType) {
+ *         case 'country-update':
+ *         case 'city-update':
+ *           flightDispatcher.waitFor([CityStore.dispatchToken]);
+ *           FlightPriceStore.price =
+ *             getFlightPriceStore(CountryStore.country, CityStore.city);
+ *           break;
+ *     }
+ *   });
+ *
+ * The `country-update` payload will be guaranteed to invoke the stores'
+ * registered callbacks in order: `CountryStore`, `CityStore`, then
+ * `FlightPriceStore`.
+ */
+
+var Dispatcher = (function () {
+  function Dispatcher() {
+    _classCallCheck(this, Dispatcher);
+
+    this._callbacks = {};
+    this._isDispatching = false;
+    this._isHandled = {};
+    this._isPending = {};
+    this._lastID = 1;
+  }
+
+  /**
+   * Registers a callback to be invoked with every dispatched payload. Returns
+   * a token that can be used with `waitFor()`.
+   */
+
+  Dispatcher.prototype.register = function register(callback) {
+    var id = _prefix + this._lastID++;
+    this._callbacks[id] = callback;
+    return id;
+  };
+
+  /**
+   * Removes a callback based on its token.
+   */
+
+  Dispatcher.prototype.unregister = function unregister(id) {
+    !this._callbacks[id] ?  true ? invariant(false, 'Dispatcher.unregister(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
+    delete this._callbacks[id];
+  };
+
+  /**
+   * Waits for the callbacks specified to be invoked before continuing execution
+   * of the current callback. This method should only be used by a callback in
+   * response to a dispatched payload.
+   */
+
+  Dispatcher.prototype.waitFor = function waitFor(ids) {
+    !this._isDispatching ?  true ? invariant(false, 'Dispatcher.waitFor(...): Must be invoked while dispatching.') : invariant(false) : undefined;
+    for (var ii = 0; ii < ids.length; ii++) {
+      var id = ids[ii];
+      if (this._isPending[id]) {
+        !this._isHandled[id] ?  true ? invariant(false, 'Dispatcher.waitFor(...): Circular dependency detected while ' + 'waiting for `%s`.', id) : invariant(false) : undefined;
+        continue;
+      }
+      !this._callbacks[id] ?  true ? invariant(false, 'Dispatcher.waitFor(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
+      this._invokeCallback(id);
+    }
+  };
+
+  /**
+   * Dispatches a payload to all registered callbacks.
+   */
+
+  Dispatcher.prototype.dispatch = function dispatch(payload) {
+    !!this._isDispatching ?  true ? invariant(false, 'Dispatch.dispatch(...): Cannot dispatch in the middle of a dispatch.') : invariant(false) : undefined;
+    this._startDispatching(payload);
+    try {
+      for (var id in this._callbacks) {
+        if (this._isPending[id]) {
+          continue;
+        }
+        this._invokeCallback(id);
+      }
+    } finally {
+      this._stopDispatching();
+    }
+  };
+
+  /**
+   * Is this Dispatcher currently dispatching.
+   */
+
+  Dispatcher.prototype.isDispatching = function isDispatching() {
+    return this._isDispatching;
+  };
+
+  /**
+   * Call the callback stored with the given id. Also do some internal
+   * bookkeeping.
+   *
+   * @internal
+   */
+
+  Dispatcher.prototype._invokeCallback = function _invokeCallback(id) {
+    this._isPending[id] = true;
+    this._callbacks[id](this._pendingPayload);
+    this._isHandled[id] = true;
+  };
+
+  /**
+   * Set up bookkeeping needed when dispatching.
+   *
+   * @internal
+   */
+
+  Dispatcher.prototype._startDispatching = function _startDispatching(payload) {
+    for (var id in this._callbacks) {
+      this._isPending[id] = false;
+      this._isHandled[id] = false;
+    }
+    this._pendingPayload = payload;
+    this._isDispatching = true;
+  };
+
+  /**
+   * Clear bookkeeping used for dispatching.
+   *
+   * @internal
+   */
+
+  Dispatcher.prototype._stopDispatching = function _stopDispatching() {
+    delete this._pendingPayload;
+    this._isDispatching = false;
+  };
+
+  return Dispatcher;
+})();
+
+module.exports = Dispatcher;
+
+/***/ }),
+/* 19 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule invariant
+ */
+
+
+
+/**
+ * Use invariant() to assert state which your program assumes to be true.
+ *
+ * Provide sprintf-style format (only %s is supported) and arguments
+ * to provide information about what broke and what you were
+ * expecting.
+ *
+ * The invariant message will be stripped in production, but the invariant
+ * will remain to ensure logic does not differ in production.
+ */
+
+var invariant = function (condition, format, a, b, c, d, e, f) {
+  if (true) {
+    if (format === undefined) {
+      throw new Error('invariant requires an error message argument');
+    }
+  }
+
+  if (!condition) {
+    var error;
+    if (format === undefined) {
+      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
+    } else {
+      var args = [a, b, c, d, e, f];
+      var argIndex = 0;
+      error = new Error('Invariant Violation: ' + format.replace(/%s/g, function () {
+        return args[argIndex++];
+      }));
+    }
+
+    error.framesToPop = 1; // we don't care about invariant's own frame
+    throw error;
+  }
+};
+
+module.exports = invariant;
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.setAppState = setAppState;
+exports.snapshot = snapshot;
+exports.saveInitialSnapshot = saveInitialSnapshot;
+exports.filterSnapshots = filterSnapshots;
+
+var _functions = __webpack_require__(2);
+
+var fn = _interopRequireWildcard(_functions);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+
+function setAppState(instance, data, onStore) {
+  var obj = instance.deserialize(data);
+  fn.eachObject(function (key, value) {
+    var store = instance.stores[key];
+    if (store) {
+      (function () {
+        var config = store.StoreModel.config;
+
+        var state = store.state;
+        if (config.onDeserialize) obj[key] = config.onDeserialize(value) || value;
+        if (fn.isMutableObject(state)) {
+          fn.eachObject(function (k) {
+            return delete state[k];
+          }, [state]);
+          fn.assign(state, obj[key]);
+        } else {
+          store.state = obj[key];
+        }
+        onStore(store, store.state);
+      })();
+    }
+  }, [obj]);
+}
+
+function snapshot(instance) {
+  var storeNames = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
+
+  var stores = storeNames.length ? storeNames : Object.keys(instance.stores);
+  return stores.reduce(function (obj, storeHandle) {
+    var storeName = storeHandle.displayName || storeHandle;
+    var store = instance.stores[storeName];
+    var config = store.StoreModel.config;
+
+    store.lifecycle('snapshot');
+    var customSnapshot = config.onSerialize && config.onSerialize(store.state);
+    obj[storeName] = customSnapshot ? customSnapshot : store.getState();
+    return obj;
+  }, {});
+}
+
+function saveInitialSnapshot(instance, key) {
+  var state = instance.deserialize(instance.serialize(instance.stores[key].state));
+  instance._initSnapshot[key] = state;
+  instance._lastSnapshot[key] = state;
+}
+
+function filterSnapshots(instance, state, stores) {
+  return stores.reduce(function (obj, store) {
+    var storeName = store.displayName || store;
+    if (!state[storeName]) {
+      throw new ReferenceError(String(storeName) + ' is not a valid store');
+    }
+    obj[storeName] = state[storeName];
+    return obj;
+  }, {});
+}
+
+/***/ }),
+/* 21 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createStoreConfig = createStoreConfig;
+exports.transformStore = transformStore;
+exports.createStoreFromObject = createStoreFromObject;
+exports.createStoreFromClass = createStoreFromClass;
+
+var _AltUtils = __webpack_require__(6);
+
+var utils = _interopRequireWildcard(_AltUtils);
+
+var _functions = __webpack_require__(2);
+
+var fn = _interopRequireWildcard(_functions);
+
+var _AltStore = __webpack_require__(22);
+
+var _AltStore2 = _interopRequireDefault(_AltStore);
+
+var _StoreMixin = __webpack_require__(23);
+
+var _StoreMixin2 = _interopRequireDefault(_StoreMixin);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function doSetState(store, storeInstance, state) {
+  if (!state) {
+    return;
+  }
+
+  var config = storeInstance.StoreModel.config;
+
+
+  var nextState = fn.isFunction(state) ? state(storeInstance.state) : state;
+
+  storeInstance.state = config.setState.call(store, storeInstance.state, nextState);
+
+  if (!store.alt.dispatcher.isDispatching()) {
+    store.emitChange();
+  }
+}
+
+function createPrototype(proto, alt, key, extras) {
+  return fn.assign(proto, _StoreMixin2['default'], {
+    displayName: key,
+    alt: alt,
+    dispatcher: alt.dispatcher,
+    preventDefault: function () {
+      function preventDefault() {
+        this.getInstance().preventDefault = true;
+      }
+
+      return preventDefault;
+    }(),
+
+    boundListeners: [],
+    lifecycleEvents: {},
+    actionListeners: {},
+    publicMethods: {},
+    handlesOwnErrors: false
+  }, extras);
+}
+
+function createStoreConfig(globalConfig, StoreModel) {
+  StoreModel.config = fn.assign({
+    getState: function () {
+      function getState(state) {
+        if (Array.isArray(state)) {
+          return state.slice();
+        } else if (fn.isMutableObject(state)) {
+          return fn.assign({}, state);
+        }
+
+        return state;
+      }
+
+      return getState;
+    }(),
+    setState: function () {
+      function setState(currentState, nextState) {
+        if (fn.isMutableObject(nextState)) {
+          return fn.assign(currentState, nextState);
+        }
+        return nextState;
+      }
+
+      return setState;
+    }()
+  }, globalConfig, StoreModel.config);
+}
+
+function transformStore(transforms, StoreModel) {
+  return transforms.reduce(function (Store, transform) {
+    return transform(Store);
+  }, StoreModel);
+}
+
+function createStoreFromObject(alt, StoreModel, key) {
+  var storeInstance = void 0;
+
+  var StoreProto = createPrototype({}, alt, key, fn.assign({
+    getInstance: function () {
+      function getInstance() {
+        return storeInstance;
+      }
+
+      return getInstance;
+    }(),
+    setState: function () {
+      function setState(nextState) {
+        doSetState(this, storeInstance, nextState);
+      }
+
+      return setState;
+    }()
+  }, StoreModel));
+
+  // bind the store listeners
+  /* istanbul ignore else */
+  if (StoreProto.bindListeners) {
+    _StoreMixin2['default'].bindListeners.call(StoreProto, StoreProto.bindListeners);
+  }
+  /* istanbul ignore else */
+  if (StoreProto.observe) {
+    _StoreMixin2['default'].bindListeners.call(StoreProto, StoreProto.observe(alt));
+  }
+
+  // bind the lifecycle events
+  /* istanbul ignore else */
+  if (StoreProto.lifecycle) {
+    fn.eachObject(function (eventName, event) {
+      _StoreMixin2['default'].on.call(StoreProto, eventName, event);
+    }, [StoreProto.lifecycle]);
+  }
+
+  // create the instance and fn.assign the public methods to the instance
+  storeInstance = fn.assign(new _AltStore2['default'](alt, StoreProto, StoreProto.state !== undefined ? StoreProto.state : {}, StoreModel), StoreProto.publicMethods, {
+    displayName: key,
+    config: StoreModel.config
+  });
+
+  return storeInstance;
+}
+
+function createStoreFromClass(alt, StoreModel, key) {
+  var storeInstance = void 0;
+  var config = StoreModel.config;
+
+  // Creating a class here so we don't overload the provided store's
+  // prototype with the mixin behaviour and I'm extending from StoreModel
+  // so we can inherit any extensions from the provided store.
+
+  var Store = function (_StoreModel) {
+    _inherits(Store, _StoreModel);
+
+    function Store() {
+      _classCallCheck(this, Store);
+
+      for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        args[_key2] = arguments[_key2];
+      }
+
+      return _possibleConstructorReturn(this, _StoreModel.call.apply(_StoreModel, [this].concat(args)));
+    }
+
+    return Store;
+  }(StoreModel);
+
+  createPrototype(Store.prototype, alt, key, {
+    type: 'AltStore',
+    getInstance: function () {
+      function getInstance() {
+        return storeInstance;
+      }
+
+      return getInstance;
+    }(),
+    setState: function () {
+      function setState(nextState) {
+        doSetState(this, storeInstance, nextState);
+      }
+
+      return setState;
+    }()
+  });
+
+  for (var _len = arguments.length, argsForClass = Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+    argsForClass[_key - 3] = arguments[_key];
+  }
+
+  var store = new (Function.prototype.bind.apply(Store, [null].concat(argsForClass)))();
+
+  /* istanbul ignore next */
+  if (config.bindListeners) store.bindListeners(config.bindListeners);
+  /* istanbul ignore next */
+  if (config.datasource) store.registerAsync(config.datasource);
+
+  storeInstance = fn.assign(new _AltStore2['default'](alt, store, store.state !== undefined ? store.state : store, StoreModel), utils.getInternalMethods(StoreModel), config.publicMethods, { displayName: key });
+
+  return storeInstance;
+}
+
+/***/ }),
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _functions = __webpack_require__(2);
+
+var fn = _interopRequireWildcard(_functions);
+
+var _transmitter = __webpack_require__(7);
+
+var _transmitter2 = _interopRequireDefault(_transmitter);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AltStore = function () {
+  function AltStore(alt, model, state, StoreModel) {
+    var _this = this;
+
+    _classCallCheck(this, AltStore);
+
+    var lifecycleEvents = model.lifecycleEvents;
+    this.transmitter = (0, _transmitter2['default'])();
+    this.lifecycle = function (event, x) {
+      if (lifecycleEvents[event]) lifecycleEvents[event].publish(x);
+    };
+    this.state = state;
+
+    this.alt = alt;
+    this.preventDefault = false;
+    this.displayName = model.displayName;
+    this.boundListeners = model.boundListeners;
+    this.StoreModel = StoreModel;
+    this.reduce = model.reduce || function (x) {
+      return x;
+    };
+    this.subscriptions = [];
+
+    var output = model.output || function (x) {
+      return x;
+    };
+
+    this.emitChange = function () {
+      return _this.transmitter.publish(output(_this.state));
+    };
+
+    var handleDispatch = function handleDispatch(f, payload) {
+      try {
+        return f();
+      } catch (e) {
+        if (model.handlesOwnErrors) {
+          _this.lifecycle('error', {
+            error: e,
+            payload: payload,
+            state: _this.state
+          });
+          return false;
+        }
+
+        throw e;
+      }
+    };
+
+    fn.assign(this, model.publicMethods);
+
+    // Register dispatcher
+    this.dispatchToken = alt.dispatcher.register(function (payload) {
+      _this.preventDefault = false;
+
+      _this.lifecycle('beforeEach', {
+        payload: payload,
+        state: _this.state
+      });
+
+      var actionHandlers = model.actionListeners[payload.action];
+
+      if (actionHandlers || model.otherwise) {
+        var result = void 0;
+
+        if (actionHandlers) {
+          result = handleDispatch(function () {
+            return actionHandlers.filter(Boolean).every(function (handler) {
+              return handler.call(model, payload.data, payload.action) !== false;
+            });
+          }, payload);
+        } else {
+          result = handleDispatch(function () {
+            return model.otherwise(payload.data, payload.action);
+          }, payload);
+        }
+
+        if (result !== false && !_this.preventDefault) _this.emitChange();
+      }
+
+      if (model.reduce) {
+        handleDispatch(function () {
+          var value = model.reduce(_this.state, payload);
+          if (value !== undefined) _this.state = value;
+        }, payload);
+        if (!_this.preventDefault) _this.emitChange();
+      }
+
+      _this.lifecycle('afterEach', {
+        payload: payload,
+        state: _this.state
+      });
+    });
+
+    this.lifecycle('init');
+  }
+
+  AltStore.prototype.listen = function () {
+    function listen(cb) {
+      var _this2 = this;
+
+      if (!fn.isFunction(cb)) throw new TypeError('listen expects a function');
+
+      var _transmitter$subscrib = this.transmitter.subscribe(cb);
+
+      var dispose = _transmitter$subscrib.dispose;
+
+      this.subscriptions.push({ cb: cb, dispose: dispose });
+      return function () {
+        _this2.lifecycle('unlisten');
+        dispose();
+      };
+    }
+
+    return listen;
+  }();
+
+  AltStore.prototype.unlisten = function () {
+    function unlisten(cb) {
+      this.lifecycle('unlisten');
+      this.subscriptions.filter(function (subscription) {
+        return subscription.cb === cb;
+      }).forEach(function (subscription) {
+        return subscription.dispose();
+      });
+    }
+
+    return unlisten;
+  }();
+
+  AltStore.prototype.getState = function () {
+    function getState() {
+      return this.StoreModel.config.getState.call(this, this.state);
+    }
+
+    return getState;
+  }();
+
+  return AltStore;
+}();
+
+exports['default'] = AltStore;
+module.exports = exports['default'];
+
+/***/ }),
+/* 23 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _transmitter = __webpack_require__(7);
+
+var _transmitter2 = _interopRequireDefault(_transmitter);
+
+var _functions = __webpack_require__(2);
+
+var fn = _interopRequireWildcard(_functions);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var StoreMixin = {
+  waitFor: function () {
+    function waitFor() {
+      for (var _len = arguments.length, sources = Array(_len), _key = 0; _key < _len; _key++) {
+        sources[_key] = arguments[_key];
+      }
+
+      if (!sources.length) {
+        throw new ReferenceError('Dispatch tokens not provided');
+      }
+
+      var sourcesArray = sources;
+      if (sources.length === 1) {
+        sourcesArray = Array.isArray(sources[0]) ? sources[0] : sources;
+      }
+
+      var tokens = sourcesArray.map(function (source) {
+        return source.dispatchToken || source;
+      });
+
+      this.dispatcher.waitFor(tokens);
+    }
+
+    return waitFor;
+  }(),
+  exportAsync: function () {
+    function exportAsync(asyncMethods) {
+      this.registerAsync(asyncMethods);
+    }
+
+    return exportAsync;
+  }(),
+  registerAsync: function () {
+    function registerAsync(asyncDef) {
+      var _this = this;
+
+      var loadCounter = 0;
+
+      var asyncMethods = fn.isFunction(asyncDef) ? asyncDef(this.alt) : asyncDef;
+
+      var toExport = Object.keys(asyncMethods).reduce(function (publicMethods, methodName) {
+        var desc = asyncMethods[methodName];
+        var spec = fn.isFunction(desc) ? desc(_this) : desc;
+
+        var validHandlers = ['success', 'error', 'loading'];
+        validHandlers.forEach(function (handler) {
+          if (spec[handler] && !spec[handler].id) {
+            throw new Error(String(handler) + ' handler must be an action function');
+          }
+        });
+
+        publicMethods[methodName] = function () {
+          for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            args[_key2] = arguments[_key2];
+          }
+
+          var state = _this.getInstance().getState();
+          var value = spec.local && spec.local.apply(spec, [state].concat(args));
+          var shouldFetch = spec.shouldFetch ? spec.shouldFetch.apply(spec, [state].concat(args))
+          /*eslint-disable*/
+          : value == null;
+          /*eslint-enable*/
+          var intercept = spec.interceptResponse || function (x) {
+            return x;
+          };
+
+          var makeActionHandler = function () {
+            function makeActionHandler(action, isError) {
+              return function (x) {
+                var fire = function () {
+                  function fire() {
+                    loadCounter -= 1;
+                    action(intercept(x, action, args));
+                    if (isError) throw x;
+                    return x;
+                  }
+
+                  return fire;
+                }();
+                return _this.alt.trapAsync ? function () {
+                  return fire();
+                } : fire();
+              };
+            }
+
+            return makeActionHandler;
+          }();
+
+          // if we don't have it in cache then fetch it
+          if (shouldFetch) {
+            loadCounter += 1;
+            /* istanbul ignore else */
+            if (spec.loading) spec.loading(intercept(null, spec.loading, args));
+            return spec.remote.apply(spec, [state].concat(args)).then(makeActionHandler(spec.success), makeActionHandler(spec.error, 1));
+          }
+
+          // otherwise emit the change now
+          _this.emitChange();
+          return value;
+        };
+
+        return publicMethods;
+      }, {});
+
+      this.exportPublicMethods(toExport);
+      this.exportPublicMethods({
+        isLoading: function () {
+          function isLoading() {
+            return loadCounter > 0;
+          }
+
+          return isLoading;
+        }()
+      });
+    }
+
+    return registerAsync;
+  }(),
+  exportPublicMethods: function () {
+    function exportPublicMethods(methods) {
+      var _this2 = this;
+
+      fn.eachObject(function (methodName, value) {
+        if (!fn.isFunction(value)) {
+          throw new TypeError('exportPublicMethods expects a function');
+        }
+
+        _this2.publicMethods[methodName] = value;
+      }, [methods]);
+    }
+
+    return exportPublicMethods;
+  }(),
+  emitChange: function () {
+    function emitChange() {
+      this.getInstance().emitChange();
+    }
+
+    return emitChange;
+  }(),
+  on: function () {
+    function on(lifecycleEvent, handler) {
+      if (lifecycleEvent === 'error') this.handlesOwnErrors = true;
+      var bus = this.lifecycleEvents[lifecycleEvent] || (0, _transmitter2['default'])();
+      this.lifecycleEvents[lifecycleEvent] = bus;
+      return bus.subscribe(handler.bind(this));
+    }
+
+    return on;
+  }(),
+  bindAction: function () {
+    function bindAction(symbol, handler) {
+      if (!symbol) {
+        throw new ReferenceError('Invalid action reference passed in');
+      }
+      if (!fn.isFunction(handler)) {
+        throw new TypeError('bindAction expects a function');
+      }
+
+      // You can pass in the constant or the function itself
+      var key = symbol.id ? symbol.id : symbol;
+      this.actionListeners[key] = this.actionListeners[key] || [];
+      this.actionListeners[key].push(handler.bind(this));
+      this.boundListeners.push(key);
+    }
+
+    return bindAction;
+  }(),
+  bindActions: function () {
+    function bindActions(actions) {
+      var _this3 = this;
+
+      fn.eachObject(function (action, symbol) {
+        var matchFirstCharacter = /./;
+        var assumedEventHandler = action.replace(matchFirstCharacter, function (x) {
+          return 'on' + String(x[0].toUpperCase());
+        });
+
+        if (_this3[action] && _this3[assumedEventHandler]) {
+          // If you have both action and onAction
+          throw new ReferenceError('You have multiple action handlers bound to an action: ' + (String(action) + ' and ' + String(assumedEventHandler)));
+        }
+
+        var handler = _this3[action] || _this3[assumedEventHandler];
+        if (handler) {
+          _this3.bindAction(symbol, handler);
+        }
+      }, [actions]);
+    }
+
+    return bindActions;
+  }(),
+  bindListeners: function () {
+    function bindListeners(obj) {
+      var _this4 = this;
+
+      fn.eachObject(function (methodName, symbol) {
+        var listener = _this4[methodName];
+
+        if (!listener) {
+          throw new ReferenceError(String(methodName) + ' defined but does not exist in ' + String(_this4.displayName));
+        }
+
+        if (Array.isArray(symbol)) {
+          symbol.forEach(function (action) {
+            _this4.bindAction(action, listener);
+          });
+        } else {
+          _this4.bindAction(symbol, listener);
+        }
+      }, [obj]);
+    }
+
+    return bindListeners;
+  }()
+};
+
+exports['default'] = StoreMixin;
+module.exports = exports['default'];
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports['default'] = makeAction;
+
+var _functions = __webpack_require__(2);
+
+var fn = _interopRequireWildcard(_functions);
+
+var _AltUtils = __webpack_require__(6);
+
+var utils = _interopRequireWildcard(_AltUtils);
+
+var _isPromise = __webpack_require__(25);
+
+var _isPromise2 = _interopRequireDefault(_isPromise);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+
+function makeAction(alt, namespace, name, implementation, obj) {
+  var id = utils.uid(alt._actionsRegistry, String(namespace) + '.' + String(name));
+  alt._actionsRegistry[id] = 1;
+
+  var data = { id: id, namespace: namespace, name: name };
+
+  var dispatch = function dispatch(payload) {
+    return alt.dispatch(id, payload, data);
+  };
+
+  // the action itself
+  var action = function action() {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    var invocationResult = implementation.apply(obj, args);
+    var actionResult = invocationResult;
+
+    // async functions that return promises should not be dispatched
+    if (invocationResult !== undefined && !(0, _isPromise2['default'])(invocationResult)) {
+      if (fn.isFunction(invocationResult)) {
+        // inner function result should be returned as an action result
+        actionResult = invocationResult(dispatch, alt);
+      } else {
+        dispatch(invocationResult);
+      }
+    }
+
+    if (invocationResult === undefined) {
+      utils.warn('An action was called but nothing was dispatched');
+    }
+
+    return actionResult;
+  };
+  action.defer = function () {
+    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      args[_key2] = arguments[_key2];
+    }
+
+    return setTimeout(function () {
+      return action.apply(null, args);
+    });
+  };
+  action.id = id;
+  action.data = data;
+
+  // ensure each reference is unique in the namespace
+  var container = alt.actions[namespace];
+  var namespaceId = utils.uid(container, name);
+  container[namespaceId] = action;
+
+  // generate a constant
+  var constant = utils.formatAsConstant(namespaceId);
+  container[constant] = id;
+
+  return action;
+}
+module.exports = exports['default'];
+
+/***/ }),
+/* 25 */
+/***/ (function(module, exports) {
+
+module.exports = isPromise;
+
+function isPromise(obj) {
+  return !!obj && (typeof obj === 'object' || typeof obj === 'function') && typeof obj.then === 'function';
+}
+
+
+/***/ }),
+/* 26 */
+/***/ (function(module, exports) {
+
+// Unique ID creation requires a high quality random # generator.  In the
+// browser this is a little complicated due to unknown quality of Math.random()
+// and inconsistent support for the `crypto` API.  We do the best we can via
+// feature-detection
+
+// getRandomValues needs to be invoked in a context where "this" is a Crypto implementation.
+var getRandomValues = (typeof(crypto) != 'undefined' && crypto.getRandomValues.bind(crypto)) ||
+                      (typeof(msCrypto) != 'undefined' && msCrypto.getRandomValues.bind(msCrypto));
+if (getRandomValues) {
+  // WHATWG crypto RNG - http://wiki.whatwg.org/wiki/Crypto
+  var rnds8 = new Uint8Array(16); // eslint-disable-line no-undef
+
+  module.exports = function whatwgRNG() {
+    getRandomValues(rnds8);
+    return rnds8;
+  };
+} else {
+  // Math.random()-based (RNG)
+  //
+  // If all else fails, use Math.random().  It's fast, but is of unspecified
+  // quality.
+  var rnds = new Array(16);
+
+  module.exports = function mathRNG() {
+    for (var i = 0, r; i < 16; i++) {
+      if ((i & 0x03) === 0) r = Math.random() * 0x100000000;
+      rnds[i] = r >>> ((i & 0x03) << 3) & 0xff;
+    }
+
+    return rnds;
+  };
+}
+
+
+/***/ }),
+/* 27 */
+/***/ (function(module, exports) {
+
+/**
+ * Convert array of 16 byte values to UUID string format of the form:
+ * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+ */
+var byteToHex = [];
+for (var i = 0; i < 256; ++i) {
+  byteToHex[i] = (i + 0x100).toString(16).substr(1);
+}
+
+function bytesToUuid(buf, offset) {
+  var i = offset || 0;
+  var bth = byteToHex;
+  return bth[buf[i++]] + bth[buf[i++]] +
+          bth[buf[i++]] + bth[buf[i++]] + '-' +
+          bth[buf[i++]] + bth[buf[i++]] + '-' +
+          bth[buf[i++]] + bth[buf[i++]] + '-' +
+          bth[buf[i++]] + bth[buf[i++]] + '-' +
+          bth[buf[i++]] + bth[buf[i++]] +
+          bth[buf[i++]] + bth[buf[i++]] +
+          bth[buf[i++]] + bth[buf[i++]];
+}
+
+module.exports = bytesToUuid;
+
+
+/***/ }),
+/* 28 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(global) {
+
+var required = __webpack_require__(30)
+  , qs = __webpack_require__(31)
+  , protocolre = /^([a-z][a-z0-9.+-]*:)?(\/\/)?([\S\s]*)/i
+  , slashes = /^[A-Za-z][A-Za-z0-9+-.]*:\/\//;
+
+/**
+ * These are the parse rules for the URL parser, it informs the parser
+ * about:
+ *
+ * 0. The char it Needs to parse, if it's a string it should be done using
+ *    indexOf, RegExp using exec and NaN means set as current value.
+ * 1. The property we should set when parsing this value.
+ * 2. Indication if it's backwards or forward parsing, when set as number it's
+ *    the value of extra chars that should be split off.
+ * 3. Inherit from location if non existing in the parser.
+ * 4. `toLowerCase` the resulting value.
+ */
+var rules = [
+  ['#', 'hash'],                        // Extract from the back.
+  ['?', 'query'],                       // Extract from the back.
+  ['/', 'pathname'],                    // Extract from the back.
+  ['@', 'auth', 1],                     // Extract from the front.
+  [NaN, 'host', undefined, 1, 1],       // Set left over value.
+  [/:(\d+)$/, 'port', undefined, 1],    // RegExp the back.
+  [NaN, 'hostname', undefined, 1, 1]    // Set left over.
+];
+
+/**
+ * These properties should not be copied or inherited from. This is only needed
+ * for all non blob URL's as a blob URL does not include a hash, only the
+ * origin.
+ *
+ * @type {Object}
+ * @private
+ */
+var ignore = { hash: 1, query: 1 };
+
+/**
+ * The location object differs when your code is loaded through a normal page,
+ * Worker or through a worker using a blob. And with the blobble begins the
+ * trouble as the location object will contain the URL of the blob, not the
+ * location of the page where our code is loaded in. The actual origin is
+ * encoded in the `pathname` so we can thankfully generate a good "default"
+ * location from it so we can generate proper relative URL's again.
+ *
+ * @param {Object|String} loc Optional default location object.
+ * @returns {Object} lolcation object.
+ * @api public
+ */
+function lolcation(loc) {
+  loc = loc || global.location || {};
+
+  var finaldestination = {}
+    , type = typeof loc
+    , key;
+
+  if ('blob:' === loc.protocol) {
+    finaldestination = new URL(unescape(loc.pathname), {});
+  } else if ('string' === type) {
+    finaldestination = new URL(loc, {});
+    for (key in ignore) delete finaldestination[key];
+  } else if ('object' === type) {
+    for (key in loc) {
+      if (key in ignore) continue;
+      finaldestination[key] = loc[key];
+    }
+
+    if (finaldestination.slashes === undefined) {
+      finaldestination.slashes = slashes.test(loc.href);
+    }
+  }
+
+  return finaldestination;
+}
+
+/**
+ * @typedef ProtocolExtract
+ * @type Object
+ * @property {String} protocol Protocol matched in the URL, in lowercase.
+ * @property {Boolean} slashes `true` if protocol is followed by "//", else `false`.
+ * @property {String} rest Rest of the URL that is not part of the protocol.
+ */
+
+/**
+ * Extract protocol information from a URL with/without double slash ("//").
+ *
+ * @param {String} address URL we want to extract from.
+ * @return {ProtocolExtract} Extracted information.
+ * @api private
+ */
+function extractProtocol(address) {
+  var match = protocolre.exec(address);
+
+  return {
+    protocol: match[1] ? match[1].toLowerCase() : '',
+    slashes: !!match[2],
+    rest: match[3]
+  };
+}
+
+/**
+ * Resolve a relative URL pathname against a base URL pathname.
+ *
+ * @param {String} relative Pathname of the relative URL.
+ * @param {String} base Pathname of the base URL.
+ * @return {String} Resolved pathname.
+ * @api private
+ */
+function resolve(relative, base) {
+  var path = (base || '/').split('/').slice(0, -1).concat(relative.split('/'))
+    , i = path.length
+    , last = path[i - 1]
+    , unshift = false
+    , up = 0;
+
+  while (i--) {
+    if (path[i] === '.') {
+      path.splice(i, 1);
+    } else if (path[i] === '..') {
+      path.splice(i, 1);
+      up++;
+    } else if (up) {
+      if (i === 0) unshift = true;
+      path.splice(i, 1);
+      up--;
+    }
+  }
+
+  if (unshift) path.unshift('');
+  if (last === '.' || last === '..') path.push('');
+
+  return path.join('/');
+}
+
+/**
+ * The actual URL instance. Instead of returning an object we've opted-in to
+ * create an actual constructor as it's much more memory efficient and
+ * faster and it pleases my OCD.
+ *
+ * @constructor
+ * @param {String} address URL we want to parse.
+ * @param {Object|String} location Location defaults for relative paths.
+ * @param {Boolean|Function} parser Parser for the query string.
+ * @api public
+ */
+function URL(address, location, parser) {
+  if (!(this instanceof URL)) {
+    return new URL(address, location, parser);
+  }
+
+  var relative, extracted, parse, instruction, index, key
+    , instructions = rules.slice()
+    , type = typeof location
+    , url = this
+    , i = 0;
+
+  //
+  // The following if statements allows this module two have compatibility with
+  // 2 different API:
+  //
+  // 1. Node.js's `url.parse` api which accepts a URL, boolean as arguments
+  //    where the boolean indicates that the query string should also be parsed.
+  //
+  // 2. The `URL` interface of the browser which accepts a URL, object as
+  //    arguments. The supplied object will be used as default values / fall-back
+  //    for relative paths.
+  //
+  if ('object' !== type && 'string' !== type) {
+    parser = location;
+    location = null;
+  }
+
+  if (parser && 'function' !== typeof parser) parser = qs.parse;
+
+  location = lolcation(location);
+
+  //
+  // Extract protocol information before running the instructions.
+  //
+  extracted = extractProtocol(address || '');
+  relative = !extracted.protocol && !extracted.slashes;
+  url.slashes = extracted.slashes || relative && location.slashes;
+  url.protocol = extracted.protocol || location.protocol || '';
+  address = extracted.rest;
+
+  //
+  // When the authority component is absent the URL starts with a path
+  // component.
+  //
+  if (!extracted.slashes) instructions[2] = [/(.*)/, 'pathname'];
+
+  for (; i < instructions.length; i++) {
+    instruction = instructions[i];
+    parse = instruction[0];
+    key = instruction[1];
+
+    if (parse !== parse) {
+      url[key] = address;
+    } else if ('string' === typeof parse) {
+      if (~(index = address.indexOf(parse))) {
+        if ('number' === typeof instruction[2]) {
+          url[key] = address.slice(0, index);
+          address = address.slice(index + instruction[2]);
+        } else {
+          url[key] = address.slice(index);
+          address = address.slice(0, index);
+        }
+      }
+    } else if ((index = parse.exec(address))) {
+      url[key] = index[1];
+      address = address.slice(0, index.index);
+    }
+
+    url[key] = url[key] || (
+      relative && instruction[3] ? location[key] || '' : ''
+    );
+
+    //
+    // Hostname, host and protocol should be lowercased so they can be used to
+    // create a proper `origin`.
+    //
+    if (instruction[4]) url[key] = url[key].toLowerCase();
+  }
+
+  //
+  // Also parse the supplied query string in to an object. If we're supplied
+  // with a custom parser as function use that instead of the default build-in
+  // parser.
+  //
+  if (parser) url.query = parser(url.query);
+
+  //
+  // If the URL is relative, resolve the pathname against the base URL.
+  //
+  if (
+      relative
+    && location.slashes
+    && url.pathname.charAt(0) !== '/'
+    && (url.pathname !== '' || location.pathname !== '')
+  ) {
+    url.pathname = resolve(url.pathname, location.pathname);
+  }
+
+  //
+  // We should not add port numbers if they are already the default port number
+  // for a given protocol. As the host also contains the port number we're going
+  // override it with the hostname which contains no port number.
+  //
+  if (!required(url.port, url.protocol)) {
+    url.host = url.hostname;
+    url.port = '';
+  }
+
+  //
+  // Parse down the `auth` for the username and password.
+  //
+  url.username = url.password = '';
+  if (url.auth) {
+    instruction = url.auth.split(':');
+    url.username = instruction[0] || '';
+    url.password = instruction[1] || '';
+  }
+
+  url.origin = url.protocol && url.host && url.protocol !== 'file:'
+    ? url.protocol +'//'+ url.host
+    : 'null';
+
+  //
+  // The href is just the compiled result.
+  //
+  url.href = url.toString();
+}
+
+/**
+ * This is convenience method for changing properties in the URL instance to
+ * insure that they all propagate correctly.
+ *
+ * @param {String} part          Property we need to adjust.
+ * @param {Mixed} value          The newly assigned value.
+ * @param {Boolean|Function} fn  When setting the query, it will be the function
+ *                               used to parse the query.
+ *                               When setting the protocol, double slash will be
+ *                               removed from the final url if it is true.
+ * @returns {URL}
+ * @api public
+ */
+function set(part, value, fn) {
+  var url = this;
+
+  switch (part) {
+    case 'query':
+      if ('string' === typeof value && value.length) {
+        value = (fn || qs.parse)(value);
+      }
+
+      url[part] = value;
+      break;
+
+    case 'port':
+      url[part] = value;
+
+      if (!required(value, url.protocol)) {
+        url.host = url.hostname;
+        url[part] = '';
+      } else if (value) {
+        url.host = url.hostname +':'+ value;
+      }
+
+      break;
+
+    case 'hostname':
+      url[part] = value;
+
+      if (url.port) value += ':'+ url.port;
+      url.host = value;
+      break;
+
+    case 'host':
+      url[part] = value;
+
+      if (/:\d+$/.test(value)) {
+        value = value.split(':');
+        url.port = value.pop();
+        url.hostname = value.join(':');
+      } else {
+        url.hostname = value;
+        url.port = '';
+      }
+
+      break;
+
+    case 'protocol':
+      url.protocol = value.toLowerCase();
+      url.slashes = !fn;
+      break;
+
+    case 'pathname':
+    case 'hash':
+      if (value) {
+        var char = part === 'pathname' ? '/' : '#';
+        url[part] = value.charAt(0) !== char ? char + value : value;
+      } else {
+        url[part] = value;
+      }
+      break;
+
+    default:
+      url[part] = value;
+  }
+
+  for (var i = 0; i < rules.length; i++) {
+    var ins = rules[i];
+
+    if (ins[4]) url[ins[1]] = url[ins[1]].toLowerCase();
+  }
+
+  url.origin = url.protocol && url.host && url.protocol !== 'file:'
+    ? url.protocol +'//'+ url.host
+    : 'null';
+
+  url.href = url.toString();
+
+  return url;
+}
+
+/**
+ * Transform the properties back in to a valid and full URL string.
+ *
+ * @param {Function} stringify Optional query stringify function.
+ * @returns {String}
+ * @api public
+ */
+function toString(stringify) {
+  if (!stringify || 'function' !== typeof stringify) stringify = qs.stringify;
+
+  var query
+    , url = this
+    , protocol = url.protocol;
+
+  if (protocol && protocol.charAt(protocol.length - 1) !== ':') protocol += ':';
+
+  var result = protocol + (url.slashes ? '//' : '');
+
+  if (url.username) {
+    result += url.username;
+    if (url.password) result += ':'+ url.password;
+    result += '@';
+  }
+
+  result += url.host + url.pathname;
+
+  query = 'object' === typeof url.query ? stringify(url.query) : url.query;
+  if (query) result += '?' !== query.charAt(0) ? '?'+ query : query;
+
+  if (url.hash) result += url.hash;
+
+  return result;
+}
+
+URL.prototype = { set: set, toString: toString };
+
+//
+// Expose the URL parser and some additional properties that might be useful for
+// others or testing.
+//
+URL.extractProtocol = extractProtocol;
+URL.location = lolcation;
+URL.qs = qs;
+
+module.exports = URL;
+
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(29)))
+
+/***/ }),
+/* 29 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 30 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/**
+ * Check if we're required to add a port number.
+ *
+ * @see https://url.spec.whatwg.org/#default-port
+ * @param {Number|String} port Port number we need to check
+ * @param {String} protocol Protocol we need to check against.
+ * @returns {Boolean} Is it a default port for the given protocol
+ * @api private
+ */
+module.exports = function required(port, protocol) {
+  protocol = protocol.split(':')[0];
+  port = +port;
+
+  if (!port) return false;
+
+  switch (protocol) {
+    case 'http':
+    case 'ws':
+    return port !== 80;
+
+    case 'https':
+    case 'wss':
+    return port !== 443;
+
+    case 'ftp':
+    return port !== 21;
+
+    case 'gopher':
+    return port !== 70;
+
+    case 'file':
+    return false;
+  }
+
+  return port !== 0;
+};
+
+
+/***/ }),
+/* 31 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var has = Object.prototype.hasOwnProperty;
+
+/**
+ * Decode a URI encoded string.
+ *
+ * @param {String} input The URI encoded string.
+ * @returns {String} The decoded string.
+ * @api private
+ */
+function decode(input) {
+  return decodeURIComponent(input.replace(/\+/g, ' '));
+}
+
+/**
+ * Simple query string parser.
+ *
+ * @param {String} query The query string that needs to be parsed.
+ * @returns {Object}
+ * @api public
+ */
+function querystring(query) {
+  var parser = /([^=?&]+)=?([^&]*)/g
+    , result = {}
+    , part;
+
+  //
+  // Little nifty parsing hack, leverage the fact that RegExp.exec increments
+  // the lastIndex property so we can continue executing this loop until we've
+  // parsed all results.
+  //
+  for (;
+    part = parser.exec(query);
+    result[decode(part[1])] = decode(part[2])
+  );
+
+  return result;
+}
+
+/**
+ * Transform a query string to an object.
+ *
+ * @param {Object} obj Object that should be transformed.
+ * @param {String} prefix Optional prefix.
+ * @returns {String}
+ * @api public
+ */
+function querystringify(obj, prefix) {
+  prefix = prefix || '';
+
+  var pairs = [];
+
+  //
+  // Optionally prefix with a '?' if needed
+  //
+  if ('string' !== typeof prefix) prefix = '?';
+
+  for (var key in obj) {
+    if (has.call(obj, key)) {
+      pairs.push(encodeURIComponent(key) +'='+ encodeURIComponent(obj[key]));
+    }
+  }
+
+  return pairs.length ? prefix + pairs.join('&') : '';
+}
+
+//
+// Expose the module.
+//
+exports.stringify = querystringify;
+exports.parse = querystring;
+
+
+/***/ }),
+/* 32 */
+/***/ (function(module, exports, __webpack_require__) {
+
 var AppStore, actions, fillData, isset, key, ref, syncFromLocal, syncToLocal, sync_local, updateCount, updateDates, updateIndices, uuid, val;
 
-actions = __webpack_require__(7);
+actions = __webpack_require__(8);
 
-uuid = __webpack_require__(13);
+uuid = __webpack_require__(9);
 
 window.initial_state = {
   error: null,
@@ -3193,7 +5602,7 @@ module.exports = alt.createStore(AppStore, 'AppStore');
 
 
 /***/ }),
-/* 18 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var AddFriendView, Button, Check, Component, CreateGroupForm, EditGroupForm, ExpandBtn, Grid, GridItem, GroupView, HomeView, InputFile, InputText, InputTextArea, LinkGroup, ListItemView, MAX_NAME_LENGTH, MainView, Menu, Modal, ModalView, Overlay, Pin, PinsView, Slide, SlideButton, SlideShow, Slideshow, Todo, User, UserAuthView, UserLoginView, UserSettings, UserSignupView, UserView, UserViewGroupItem, Viewer, addPinForm, addTodoForm, cn, connectToStores, doneColor, doneText, editTodoForm, h, monthNames, ref, ref1, sortUsers, stat,
@@ -3205,25 +5614,25 @@ ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
 
 Slide = __webpack_require__(5);
 
-Overlay = __webpack_require__(9);
+Overlay = __webpack_require__(10);
 
-Button = __webpack_require__(10);
+Button = __webpack_require__(11);
 
-InputFile = __webpack_require__(29);
+InputFile = __webpack_require__(39);
 
-InputText = __webpack_require__(30);
+InputText = __webpack_require__(41);
 
-InputTextArea = __webpack_require__(31);
+InputTextArea = __webpack_require__(42);
 
-Modal = __webpack_require__(32);
+Modal = __webpack_require__(43);
 
-ref1 = __webpack_require__(28), Grid = ref1.Grid, GridItem = ref1.GridItem;
+ref1 = __webpack_require__(46), Grid = ref1.Grid, GridItem = ref1.GridItem;
 
-SlideButton = __webpack_require__(33);
+SlideButton = __webpack_require__(49);
 
 monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-Viewer = __webpack_require__(27);
+Viewer = __webpack_require__(52);
 
 cn = __webpack_require__(1);
 
@@ -3264,7 +5673,7 @@ doneText = function(count, total) {
   }, total));
 };
 
-connectToStores = __webpack_require__(20);
+connectToStores = __webpack_require__(53);
 
 editTodoForm = (function(superClass) {
   extend(editTodoForm, superClass);
@@ -3489,7 +5898,7 @@ Check = (function(superClass) {
         };
       })(this),
       className: cn('btn', 'check-btn', this.props.done && 'check-btn-done'),
-      width: g.dim,
+      width: g.dim * 2,
       vertical: false,
       onClick: (function(_this) {
         return function(e) {
@@ -3604,7 +6013,7 @@ Todo = (function(superClass) {
       hover_left = true;
     }
     show_pins_button = h(Button, {
-      width: g.dim,
+      width: g.dim * 2,
       className: cn('pin-btn', active && 'active-pin', hide_pin && 'hidden-pin-btn'),
       onMouseEnter: (function(_this) {
         return function(e) {
@@ -3638,7 +6047,7 @@ Todo = (function(superClass) {
     }
     options_left = [
       !this.props.sub && h(Slide, {
-        width: g.dim,
+        width: g.dim * 2,
         className: 'pin-btn center btn b1',
         onMouseEnter: (function(_this) {
           return function() {
@@ -3664,7 +6073,7 @@ Todo = (function(superClass) {
       }, h('i', {
         className: 'material-icons'
       }, 'add')), h(Slide, {
-        width: g.dim,
+        width: g.dim * 2,
         className: 'pin-btn center btn b1',
         onMouseEnter: (function(_this) {
           return function() {
@@ -3692,7 +6101,7 @@ Todo = (function(superClass) {
       }, 'mode_edit'))
     ];
     options = h(Slide, {
-      width: g.dim,
+      width: g.dim * 2,
       className: 'pin-btn center btn b1',
       onMouseEnter: (function(_this) {
         return function() {
@@ -3722,6 +6131,7 @@ Todo = (function(superClass) {
       check_btn = h(Check, {
         _intui_slide: true,
         done: !!this.props.completed_at,
+        width: g.dim,
         onMouseEnter: (function(_this) {
           return function(e) {
             return _this.setState({
@@ -3800,7 +6210,7 @@ Todo = (function(superClass) {
       className: cn('todo', props.completed_at && 'done' || 'undone'),
       vertical: false,
       slide: false,
-      height: g.dim
+      height: g.dim * 2
     }, check_btn, h(Slide, {
       key: 'todo-main',
       beta: 100,
@@ -4225,10 +6635,9 @@ ListItemView = (function(superClass) {
       })
     ];
     return h(Slide, {
-      className: 'list pad-25-25',
+      className: 'list',
       vertical: true
     }, h(Slide, {
-      className: 'participants',
       height: g.dim
     }, options, h(SlideButton, {
       onClick: this.showGroupPins,
@@ -4466,7 +6875,7 @@ UserLoginView = (function(superClass) {
       })(this),
       type: 'text',
       name: 'email',
-      label: 'email',
+      label: 'username',
       value: this.state.email
     }), h(InputText, {
       height: g.dim,
@@ -5198,6 +7607,9 @@ AddFriendView = (function(superClass) {
     var results;
     results = props.view.search_users.map(function(u) {
       u.key = u._id;
+      u.onClick = (function(u) {
+        return actions.addFriend(u);
+      }).bind(this, u);
       return h(User, u);
     });
     return h(Slide, {
@@ -5290,13 +7702,13 @@ UserView = (function(superClass) {
   UserView.prototype.render = function(props, state) {
     var friend_items, group_items, user;
     user = props.user;
-    group_items = friend_items = props.user.friends.map(function(g, i) {
+    group_items = friend_items = props.user.friends.map(function(u, i) {
       return h(GridItem, {
         i: i,
-        w: 2,
+        w: 1,
         h: 1,
-        key: g._id
-      }, h(Item, g));
+        key: u._id
+      }, h(User, u));
     });
     friend_items.push(h(GridItem, {
       i: friend_items.length,
@@ -5415,6 +7827,10 @@ UserSettings = (function(superClass) {
       value: null
     }), h(Slide, {
       height: g.dim * 3,
+      width: g.dim * 3,
+      style: {
+        'align-self': 'center'
+      },
       center: true,
       vertical: true
     }, user), h(SlideButton, {
@@ -5669,1191 +8085,844 @@ module.exports = connectToStores(MainView);
 
 
 /***/ }),
-/* 19 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
-// style-loader: Adds some css to the DOM by adding a <style> tag
 
-// load the styles
-var content = __webpack_require__(40);
+var content = __webpack_require__(35);
+
 if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
+
+var transform;
+var insertInto;
+
+
+
+var options = {"hmr":true}
+
+options.transform = transform
+options.insertInto = undefined;
+
+var update = __webpack_require__(4)(content, options);
+
 if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
+
 if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../node_modules/css-loader/index.js!../node_modules/sass-loader/lib/loader.js!./style.scss", function() {
-			var newContent = require("!!../node_modules/css-loader/index.js!../node_modules/sass-loader/lib/loader.js!./style.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
+	module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Overlay.scss", function() {
+		var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Overlay.scss");
+
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
 	module.hot.dispose(function() { update(); });
 }
 
 /***/ }),
-/* 20 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
+exports = module.exports = __webpack_require__(3)(false);
+// imports
 
 
+// module
+exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-overlay {\n  z-index: 90;\n  transition: opacity 0.2s ease;\n  opacity: 1;\n  background: rgba(0, 0, 0, 0.8);\n  position: absolute;\n  height: 100%;\n  width: 100%;\n  left: 0px;\n  top: 0px;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-overlay-hidden {\n  pointer-events: none;\n  opacity: 0; }\n\n.-i-angle {\n  position: absolute;\n  height: 50px;\n  width: 50px; }\n\n.-i-angle-bottom {\n  left: calc(50% - 25px);\n  bottom: 0; }\n\n.-i-angle-top {\n  left: calc(50% - 25px);\n  top: 0; }\n\n.-i-angle-right {\n  right: 0%;\n  top: calc(50% - 25px); }\n\n.-i-angle-left {\n  left: 0%;\n  top: calc(50% - 25px); }\n", ""]);
 
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
+// exports
 
-var preact = __webpack_require__(0);
-
-var bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-function connectToStores(Spec) {
-  
-
-  // Check for required static methods.
-  if (!Spec.getStores) {
-    throw new Error('connectToStores() expects the wrapped component to have a static getStores() method');
-  }
-  if (!Spec.getPropsFromStores) {
-    throw new Error('connectToStores() expects the wrapped component to have a static getPropsFromStores() method');
-  }
-  var StoreConnection = (function(superClass) {
-    extend(StoreConnection, superClass);
-    function StoreConnection() {
-      this.render = bind(this.render, this);
-      this.getInitialState = bind(this.getInitialState, this);
-      // this.componentWillMount = bind(this.componentDidMount, this);
-      this.componentWillUnmount = bind(this.componentWillUnmount, this);
-      this.componentWillReceiveProps = bind(this.componentWillReceiveProps , this);
-      this.onChange = bind(this.onChange , this);
-      this.state = Spec.getPropsFromStores(this.props, this.context);
-      return StoreConnection.__super__.constructor.apply(this, arguments);
-    }
-    StoreConnection.displayName = 'Stateful' + (Spec.displayName || Spec.name || 'Container')
-    StoreConnection.prototype.componentWillReceiveProps = function(nextProps) {
-      return this.setState(Spec.getPropsFromStores(nextProps, this.context));
-    };
-
-    // StoreConnection.prototype.componentWillMount = function(props, state) {
-    //   console.log('store will mount')
-    // }
-
-    StoreConnection.prototype.componentWillMount = function(props, state) {
-      // console.log('store mounted')
-      var _this = this;
-
-      var stores = Spec.getStores(this.props, this.context);
-      this.storeListeners = stores.map(function (store) {
-        return store.listen(_this.onChange);
-      });
-      if (Spec.componentDidConnect) {
-        Spec.componentDidConnect(this.props, this.context);
-      }
-    };
-
-
-    StoreConnection.prototype.componentWillUnmount = function(props, state) {
-      this.storeListeners.forEach(function (unlisten) {
-        return unlisten();
-      });
-    };
-
-    StoreConnection.prototype.onChange = function(props, state) {
-      this.setState(Spec.getPropsFromStores(this.props, this.context));
-    };
-
-    StoreConnection.prototype.render = function(props, state) {
-      // console.log('render store',this.state)
-      return preact.h(Spec,Object.assign({}, this.props, this.state));
-    };
-
-
-    return StoreConnection
-  })(preact.Component)
-  return StoreConnection
-}
-
-
-
-exports['default'] = connectToStores;
-module.exports = exports['default'];
 
 /***/ }),
-/* 21 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
+/* 36 */
+/***/ (function(module, exports) {
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports['default'] = makeAction;
+/**
+ * When source maps are enabled, `style-loader` uses a link element with a data-uri to
+ * embed the css on the page. This breaks all relative urls because now they are relative to a
+ * bundle instead of the current page.
+ *
+ * One solution is to only use full urls, but that may be impossible.
+ *
+ * Instead, this function "fixes" the relative urls to be absolute according to the current page location.
+ *
+ * A rudimentary test suite is located at `test/fixUrls.js` and can be run via the `npm test` command.
+ *
+ */
 
-var _functions = __webpack_require__(2);
+module.exports = function (css) {
+  // get current location
+  var location = typeof window !== "undefined" && window.location;
 
-var fn = _interopRequireWildcard(_functions);
-
-var _AltUtils = __webpack_require__(6);
-
-var utils = _interopRequireWildcard(_AltUtils);
-
-var _isPromise = __webpack_require__(44);
-
-var _isPromise2 = _interopRequireDefault(_isPromise);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
-
-function makeAction(alt, namespace, name, implementation, obj) {
-  var id = utils.uid(alt._actionsRegistry, String(namespace) + '.' + String(name));
-  alt._actionsRegistry[id] = 1;
-
-  var data = { id: id, namespace: namespace, name: name };
-
-  var dispatch = function dispatch(payload) {
-    return alt.dispatch(id, payload, data);
-  };
-
-  // the action itself
-  var action = function action() {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    var invocationResult = implementation.apply(obj, args);
-    var actionResult = invocationResult;
-
-    // async functions that return promises should not be dispatched
-    if (invocationResult !== undefined && !(0, _isPromise2['default'])(invocationResult)) {
-      if (fn.isFunction(invocationResult)) {
-        // inner function result should be returned as an action result
-        actionResult = invocationResult(dispatch, alt);
-      } else {
-        dispatch(invocationResult);
-      }
-    }
-
-    if (invocationResult === undefined) {
-      utils.warn('An action was called but nothing was dispatched');
-    }
-
-    return actionResult;
-  };
-  action.defer = function () {
-    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    return setTimeout(function () {
-      return action.apply(null, args);
-    });
-  };
-  action.id = id;
-  action.data = data;
-
-  // ensure each reference is unique in the namespace
-  var container = alt.actions[namespace];
-  var namespaceId = utils.uid(container, name);
-  container[namespaceId] = action;
-
-  // generate a constant
-  var constant = utils.formatAsConstant(namespaceId);
-  container[constant] = id;
-
-  return action;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _functions = __webpack_require__(2);
-
-var fn = _interopRequireWildcard(_functions);
-
-var _transmitter = __webpack_require__(12);
-
-var _transmitter2 = _interopRequireDefault(_transmitter);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var AltStore = function () {
-  function AltStore(alt, model, state, StoreModel) {
-    var _this = this;
-
-    _classCallCheck(this, AltStore);
-
-    var lifecycleEvents = model.lifecycleEvents;
-    this.transmitter = (0, _transmitter2['default'])();
-    this.lifecycle = function (event, x) {
-      if (lifecycleEvents[event]) lifecycleEvents[event].publish(x);
-    };
-    this.state = state;
-
-    this.alt = alt;
-    this.preventDefault = false;
-    this.displayName = model.displayName;
-    this.boundListeners = model.boundListeners;
-    this.StoreModel = StoreModel;
-    this.reduce = model.reduce || function (x) {
-      return x;
-    };
-    this.subscriptions = [];
-
-    var output = model.output || function (x) {
-      return x;
-    };
-
-    this.emitChange = function () {
-      return _this.transmitter.publish(output(_this.state));
-    };
-
-    var handleDispatch = function handleDispatch(f, payload) {
-      try {
-        return f();
-      } catch (e) {
-        if (model.handlesOwnErrors) {
-          _this.lifecycle('error', {
-            error: e,
-            payload: payload,
-            state: _this.state
-          });
-          return false;
-        }
-
-        throw e;
-      }
-    };
-
-    fn.assign(this, model.publicMethods);
-
-    // Register dispatcher
-    this.dispatchToken = alt.dispatcher.register(function (payload) {
-      _this.preventDefault = false;
-
-      _this.lifecycle('beforeEach', {
-        payload: payload,
-        state: _this.state
-      });
-
-      var actionHandlers = model.actionListeners[payload.action];
-
-      if (actionHandlers || model.otherwise) {
-        var result = void 0;
-
-        if (actionHandlers) {
-          result = handleDispatch(function () {
-            return actionHandlers.filter(Boolean).every(function (handler) {
-              return handler.call(model, payload.data, payload.action) !== false;
-            });
-          }, payload);
-        } else {
-          result = handleDispatch(function () {
-            return model.otherwise(payload.data, payload.action);
-          }, payload);
-        }
-
-        if (result !== false && !_this.preventDefault) _this.emitChange();
-      }
-
-      if (model.reduce) {
-        handleDispatch(function () {
-          var value = model.reduce(_this.state, payload);
-          if (value !== undefined) _this.state = value;
-        }, payload);
-        if (!_this.preventDefault) _this.emitChange();
-      }
-
-      _this.lifecycle('afterEach', {
-        payload: payload,
-        state: _this.state
-      });
-    });
-
-    this.lifecycle('init');
+  if (!location) {
+    throw new Error("fixUrls requires window.location");
   }
 
-  AltStore.prototype.listen = function () {
-    function listen(cb) {
-      var _this2 = this;
+	// blank or null?
+	if (!css || typeof css !== "string") {
+	  return css;
+  }
 
-      if (!fn.isFunction(cb)) throw new TypeError('listen expects a function');
+  var baseUrl = location.protocol + "//" + location.host;
+  var currentDir = baseUrl + location.pathname.replace(/\/[^\/]*$/, "/");
 
-      var _transmitter$subscrib = this.transmitter.subscribe(cb);
+	// convert each url(...)
+	/*
+	This regular expression is just a way to recursively match brackets within
+	a string.
 
-      var dispose = _transmitter$subscrib.dispose;
+	 /url\s*\(  = Match on the word "url" with any whitespace after it and then a parens
+	   (  = Start a capturing group
+	     (?:  = Start a non-capturing group
+	         [^)(]  = Match anything that isn't a parentheses
+	         |  = OR
+	         \(  = Match a start parentheses
+	             (?:  = Start another non-capturing groups
+	                 [^)(]+  = Match anything that isn't a parentheses
+	                 |  = OR
+	                 \(  = Match a start parentheses
+	                     [^)(]*  = Match anything that isn't a parentheses
+	                 \)  = Match a end parentheses
+	             )  = End Group
+              *\) = Match anything and then a close parens
+          )  = Close non-capturing group
+          *  = Match anything
+       )  = Close capturing group
+	 \)  = Match a close parens
 
-      this.subscriptions.push({ cb: cb, dispose: dispose });
-      return function () {
-        _this2.lifecycle('unlisten');
-        dispose();
-      };
-    }
+	 /gi  = Get all matches, not the first.  Be case insensitive.
+	 */
+	var fixedCss = css.replace(/url\s*\(((?:[^)(]|\((?:[^)(]+|\([^)(]*\))*\))*)\)/gi, function(fullMatch, origUrl) {
+		// strip quotes (if they exist)
+		var unquotedOrigUrl = origUrl
+			.trim()
+			.replace(/^"(.*)"$/, function(o, $1){ return $1; })
+			.replace(/^'(.*)'$/, function(o, $1){ return $1; });
 
-    return listen;
-  }();
+		// already a full url? no change
+		if (/^(#|data:|http:\/\/|https:\/\/|file:\/\/\/)/i.test(unquotedOrigUrl)) {
+		  return fullMatch;
+		}
 
-  AltStore.prototype.unlisten = function () {
-    function unlisten(cb) {
-      this.lifecycle('unlisten');
-      this.subscriptions.filter(function (subscription) {
-        return subscription.cb === cb;
-      }).forEach(function (subscription) {
-        return subscription.dispose();
-      });
-    }
+		// convert the url to a full url
+		var newUrl;
 
-    return unlisten;
-  }();
+		if (unquotedOrigUrl.indexOf("//") === 0) {
+		  	//TODO: should we add protocol?
+			newUrl = unquotedOrigUrl;
+		} else if (unquotedOrigUrl.indexOf("/") === 0) {
+			// path should be relative to the base url
+			newUrl = baseUrl + unquotedOrigUrl; // already starts with '/'
+		} else {
+			// path should be relative to current directory
+			newUrl = currentDir + unquotedOrigUrl.replace(/^\.\//, ""); // Strip leading './'
+		}
 
-  AltStore.prototype.getState = function () {
-    function getState() {
-      return this.StoreModel.config.getState.call(this, this.state);
-    }
+		// send back the fixed url(...)
+		return "url(" + JSON.stringify(newUrl) + ")";
+	});
 
-    return getState;
-  }();
-
-  return AltStore;
-}();
-
-exports['default'] = AltStore;
-module.exports = exports['default'];
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _transmitter = __webpack_require__(12);
-
-var _transmitter2 = _interopRequireDefault(_transmitter);
-
-var _functions = __webpack_require__(2);
-
-var fn = _interopRequireWildcard(_functions);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var StoreMixin = {
-  waitFor: function () {
-    function waitFor() {
-      for (var _len = arguments.length, sources = Array(_len), _key = 0; _key < _len; _key++) {
-        sources[_key] = arguments[_key];
-      }
-
-      if (!sources.length) {
-        throw new ReferenceError('Dispatch tokens not provided');
-      }
-
-      var sourcesArray = sources;
-      if (sources.length === 1) {
-        sourcesArray = Array.isArray(sources[0]) ? sources[0] : sources;
-      }
-
-      var tokens = sourcesArray.map(function (source) {
-        return source.dispatchToken || source;
-      });
-
-      this.dispatcher.waitFor(tokens);
-    }
-
-    return waitFor;
-  }(),
-  exportAsync: function () {
-    function exportAsync(asyncMethods) {
-      this.registerAsync(asyncMethods);
-    }
-
-    return exportAsync;
-  }(),
-  registerAsync: function () {
-    function registerAsync(asyncDef) {
-      var _this = this;
-
-      var loadCounter = 0;
-
-      var asyncMethods = fn.isFunction(asyncDef) ? asyncDef(this.alt) : asyncDef;
-
-      var toExport = Object.keys(asyncMethods).reduce(function (publicMethods, methodName) {
-        var desc = asyncMethods[methodName];
-        var spec = fn.isFunction(desc) ? desc(_this) : desc;
-
-        var validHandlers = ['success', 'error', 'loading'];
-        validHandlers.forEach(function (handler) {
-          if (spec[handler] && !spec[handler].id) {
-            throw new Error(String(handler) + ' handler must be an action function');
-          }
-        });
-
-        publicMethods[methodName] = function () {
-          for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-            args[_key2] = arguments[_key2];
-          }
-
-          var state = _this.getInstance().getState();
-          var value = spec.local && spec.local.apply(spec, [state].concat(args));
-          var shouldFetch = spec.shouldFetch ? spec.shouldFetch.apply(spec, [state].concat(args))
-          /*eslint-disable*/
-          : value == null;
-          /*eslint-enable*/
-          var intercept = spec.interceptResponse || function (x) {
-            return x;
-          };
-
-          var makeActionHandler = function () {
-            function makeActionHandler(action, isError) {
-              return function (x) {
-                var fire = function () {
-                  function fire() {
-                    loadCounter -= 1;
-                    action(intercept(x, action, args));
-                    if (isError) throw x;
-                    return x;
-                  }
-
-                  return fire;
-                }();
-                return _this.alt.trapAsync ? function () {
-                  return fire();
-                } : fire();
-              };
-            }
-
-            return makeActionHandler;
-          }();
-
-          // if we don't have it in cache then fetch it
-          if (shouldFetch) {
-            loadCounter += 1;
-            /* istanbul ignore else */
-            if (spec.loading) spec.loading(intercept(null, spec.loading, args));
-            return spec.remote.apply(spec, [state].concat(args)).then(makeActionHandler(spec.success), makeActionHandler(spec.error, 1));
-          }
-
-          // otherwise emit the change now
-          _this.emitChange();
-          return value;
-        };
-
-        return publicMethods;
-      }, {});
-
-      this.exportPublicMethods(toExport);
-      this.exportPublicMethods({
-        isLoading: function () {
-          function isLoading() {
-            return loadCounter > 0;
-          }
-
-          return isLoading;
-        }()
-      });
-    }
-
-    return registerAsync;
-  }(),
-  exportPublicMethods: function () {
-    function exportPublicMethods(methods) {
-      var _this2 = this;
-
-      fn.eachObject(function (methodName, value) {
-        if (!fn.isFunction(value)) {
-          throw new TypeError('exportPublicMethods expects a function');
-        }
-
-        _this2.publicMethods[methodName] = value;
-      }, [methods]);
-    }
-
-    return exportPublicMethods;
-  }(),
-  emitChange: function () {
-    function emitChange() {
-      this.getInstance().emitChange();
-    }
-
-    return emitChange;
-  }(),
-  on: function () {
-    function on(lifecycleEvent, handler) {
-      if (lifecycleEvent === 'error') this.handlesOwnErrors = true;
-      var bus = this.lifecycleEvents[lifecycleEvent] || (0, _transmitter2['default'])();
-      this.lifecycleEvents[lifecycleEvent] = bus;
-      return bus.subscribe(handler.bind(this));
-    }
-
-    return on;
-  }(),
-  bindAction: function () {
-    function bindAction(symbol, handler) {
-      if (!symbol) {
-        throw new ReferenceError('Invalid action reference passed in');
-      }
-      if (!fn.isFunction(handler)) {
-        throw new TypeError('bindAction expects a function');
-      }
-
-      // You can pass in the constant or the function itself
-      var key = symbol.id ? symbol.id : symbol;
-      this.actionListeners[key] = this.actionListeners[key] || [];
-      this.actionListeners[key].push(handler.bind(this));
-      this.boundListeners.push(key);
-    }
-
-    return bindAction;
-  }(),
-  bindActions: function () {
-    function bindActions(actions) {
-      var _this3 = this;
-
-      fn.eachObject(function (action, symbol) {
-        var matchFirstCharacter = /./;
-        var assumedEventHandler = action.replace(matchFirstCharacter, function (x) {
-          return 'on' + String(x[0].toUpperCase());
-        });
-
-        if (_this3[action] && _this3[assumedEventHandler]) {
-          // If you have both action and onAction
-          throw new ReferenceError('You have multiple action handlers bound to an action: ' + (String(action) + ' and ' + String(assumedEventHandler)));
-        }
-
-        var handler = _this3[action] || _this3[assumedEventHandler];
-        if (handler) {
-          _this3.bindAction(symbol, handler);
-        }
-      }, [actions]);
-    }
-
-    return bindActions;
-  }(),
-  bindListeners: function () {
-    function bindListeners(obj) {
-      var _this4 = this;
-
-      fn.eachObject(function (methodName, symbol) {
-        var listener = _this4[methodName];
-
-        if (!listener) {
-          throw new ReferenceError(String(methodName) + ' defined but does not exist in ' + String(_this4.displayName));
-        }
-
-        if (Array.isArray(symbol)) {
-          symbol.forEach(function (action) {
-            _this4.bindAction(action, listener);
-          });
-        } else {
-          _this4.bindAction(symbol, listener);
-        }
-      }, [obj]);
-    }
-
-    return bindListeners;
-  }()
+	// send back the fixed css
+	return fixedCss;
 };
 
-exports['default'] = StoreMixin;
-module.exports = exports['default'];
 
 /***/ }),
-/* 24 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
+
+var content = __webpack_require__(38);
+
+if(typeof content === 'string') content = [[module.i, content, '']];
+
+var transform;
+var insertInto;
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.createStoreConfig = createStoreConfig;
-exports.transformStore = transformStore;
-exports.createStoreFromObject = createStoreFromObject;
-exports.createStoreFromClass = createStoreFromClass;
 
-var _AltUtils = __webpack_require__(6);
+var options = {"hmr":true}
 
-var utils = _interopRequireWildcard(_AltUtils);
+options.transform = transform
+options.insertInto = undefined;
 
-var _functions = __webpack_require__(2);
+var update = __webpack_require__(4)(content, options);
 
-var fn = _interopRequireWildcard(_functions);
+if(content.locals) module.exports = content.locals;
 
-var _AltStore = __webpack_require__(22);
+if(false) {
+	module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./Button.scss", function() {
+		var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./Button.scss");
 
-var _AltStore2 = _interopRequireDefault(_AltStore);
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 
-var _StoreMixin = __webpack_require__(23);
+		var locals = (function(a, b) {
+			var key, idx = 0;
 
-var _StoreMixin2 = _interopRequireDefault(_StoreMixin);
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+			for(key in b) idx--;
 
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+			return idx === 0;
+		}(content.locals, newContent.locals));
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+		update(newContent);
+	});
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-function doSetState(store, storeInstance, state) {
-  if (!state) {
-    return;
-  }
-
-  var config = storeInstance.StoreModel.config;
-
-
-  var nextState = fn.isFunction(state) ? state(storeInstance.state) : state;
-
-  storeInstance.state = config.setState.call(store, storeInstance.state, nextState);
-
-  if (!store.alt.dispatcher.isDispatching()) {
-    store.emitChange();
-  }
-}
-
-function createPrototype(proto, alt, key, extras) {
-  return fn.assign(proto, _StoreMixin2['default'], {
-    displayName: key,
-    alt: alt,
-    dispatcher: alt.dispatcher,
-    preventDefault: function () {
-      function preventDefault() {
-        this.getInstance().preventDefault = true;
-      }
-
-      return preventDefault;
-    }(),
-
-    boundListeners: [],
-    lifecycleEvents: {},
-    actionListeners: {},
-    publicMethods: {},
-    handlesOwnErrors: false
-  }, extras);
-}
-
-function createStoreConfig(globalConfig, StoreModel) {
-  StoreModel.config = fn.assign({
-    getState: function () {
-      function getState(state) {
-        if (Array.isArray(state)) {
-          return state.slice();
-        } else if (fn.isMutableObject(state)) {
-          return fn.assign({}, state);
-        }
-
-        return state;
-      }
-
-      return getState;
-    }(),
-    setState: function () {
-      function setState(currentState, nextState) {
-        if (fn.isMutableObject(nextState)) {
-          return fn.assign(currentState, nextState);
-        }
-        return nextState;
-      }
-
-      return setState;
-    }()
-  }, globalConfig, StoreModel.config);
-}
-
-function transformStore(transforms, StoreModel) {
-  return transforms.reduce(function (Store, transform) {
-    return transform(Store);
-  }, StoreModel);
-}
-
-function createStoreFromObject(alt, StoreModel, key) {
-  var storeInstance = void 0;
-
-  var StoreProto = createPrototype({}, alt, key, fn.assign({
-    getInstance: function () {
-      function getInstance() {
-        return storeInstance;
-      }
-
-      return getInstance;
-    }(),
-    setState: function () {
-      function setState(nextState) {
-        doSetState(this, storeInstance, nextState);
-      }
-
-      return setState;
-    }()
-  }, StoreModel));
-
-  // bind the store listeners
-  /* istanbul ignore else */
-  if (StoreProto.bindListeners) {
-    _StoreMixin2['default'].bindListeners.call(StoreProto, StoreProto.bindListeners);
-  }
-  /* istanbul ignore else */
-  if (StoreProto.observe) {
-    _StoreMixin2['default'].bindListeners.call(StoreProto, StoreProto.observe(alt));
-  }
-
-  // bind the lifecycle events
-  /* istanbul ignore else */
-  if (StoreProto.lifecycle) {
-    fn.eachObject(function (eventName, event) {
-      _StoreMixin2['default'].on.call(StoreProto, eventName, event);
-    }, [StoreProto.lifecycle]);
-  }
-
-  // create the instance and fn.assign the public methods to the instance
-  storeInstance = fn.assign(new _AltStore2['default'](alt, StoreProto, StoreProto.state !== undefined ? StoreProto.state : {}, StoreModel), StoreProto.publicMethods, {
-    displayName: key,
-    config: StoreModel.config
-  });
-
-  return storeInstance;
-}
-
-function createStoreFromClass(alt, StoreModel, key) {
-  var storeInstance = void 0;
-  var config = StoreModel.config;
-
-  // Creating a class here so we don't overload the provided store's
-  // prototype with the mixin behaviour and I'm extending from StoreModel
-  // so we can inherit any extensions from the provided store.
-
-  var Store = function (_StoreModel) {
-    _inherits(Store, _StoreModel);
-
-    function Store() {
-      _classCallCheck(this, Store);
-
-      for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-        args[_key2] = arguments[_key2];
-      }
-
-      return _possibleConstructorReturn(this, _StoreModel.call.apply(_StoreModel, [this].concat(args)));
-    }
-
-    return Store;
-  }(StoreModel);
-
-  createPrototype(Store.prototype, alt, key, {
-    type: 'AltStore',
-    getInstance: function () {
-      function getInstance() {
-        return storeInstance;
-      }
-
-      return getInstance;
-    }(),
-    setState: function () {
-      function setState(nextState) {
-        doSetState(this, storeInstance, nextState);
-      }
-
-      return setState;
-    }()
-  });
-
-  for (var _len = arguments.length, argsForClass = Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
-    argsForClass[_key - 3] = arguments[_key];
-  }
-
-  var store = new (Function.prototype.bind.apply(Store, [null].concat(argsForClass)))();
-
-  /* istanbul ignore next */
-  if (config.bindListeners) store.bindListeners(config.bindListeners);
-  /* istanbul ignore next */
-  if (config.datasource) store.registerAsync(config.datasource);
-
-  storeInstance = fn.assign(new _AltStore2['default'](alt, store, store.state !== undefined ? store.state : store, StoreModel), utils.getInternalMethods(StoreModel), config.publicMethods, { displayName: key });
-
-  return storeInstance;
+	module.hot.dispose(function() { update(); });
 }
 
 /***/ }),
-/* 25 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
+exports = module.exports = __webpack_require__(3)(false);
+// imports
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.setAppState = setAppState;
-exports.snapshot = snapshot;
-exports.saveInitialSnapshot = saveInitialSnapshot;
-exports.filterSnapshots = filterSnapshots;
+// module
+exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-btn {\n  cursor: pointer;\n  width: 100%;\n  position: relative;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center;\n  display: inline-flex; }\n  .-i-btn .label {\n    padding-left: 10px; }\n  .-i-btn i {\n    font-size: 24px; }\n  .-i-btn.disabled {\n    cursor: default;\n    pointer-events: none;\n    opacity: 0.3; }\n", ""]);
 
-var _functions = __webpack_require__(2);
-
-var fn = _interopRequireWildcard(_functions);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
-
-function setAppState(instance, data, onStore) {
-  var obj = instance.deserialize(data);
-  fn.eachObject(function (key, value) {
-    var store = instance.stores[key];
-    if (store) {
-      (function () {
-        var config = store.StoreModel.config;
-
-        var state = store.state;
-        if (config.onDeserialize) obj[key] = config.onDeserialize(value) || value;
-        if (fn.isMutableObject(state)) {
-          fn.eachObject(function (k) {
-            return delete state[k];
-          }, [state]);
-          fn.assign(state, obj[key]);
-        } else {
-          store.state = obj[key];
-        }
-        onStore(store, store.state);
-      })();
-    }
-  }, [obj]);
-}
-
-function snapshot(instance) {
-  var storeNames = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
-
-  var stores = storeNames.length ? storeNames : Object.keys(instance.stores);
-  return stores.reduce(function (obj, storeHandle) {
-    var storeName = storeHandle.displayName || storeHandle;
-    var store = instance.stores[storeName];
-    var config = store.StoreModel.config;
-
-    store.lifecycle('snapshot');
-    var customSnapshot = config.onSerialize && config.onSerialize(store.state);
-    obj[storeName] = customSnapshot ? customSnapshot : store.getState();
-    return obj;
-  }, {});
-}
-
-function saveInitialSnapshot(instance, key) {
-  var state = instance.deserialize(instance.serialize(instance.stores[key].state));
-  instance._initSnapshot[key] = state;
-  instance._lastSnapshot[key] = state;
-}
-
-function filterSnapshots(instance, state, stores) {
-  return stores.reduce(function (obj, store) {
-    var storeName = store.displayName || store;
-    if (!state[storeName]) {
-      throw new ReferenceError(String(storeName) + ' is not a valid store');
-    }
-    obj[storeName] = state[storeName];
-    return obj;
-  }, {});
-}
-
-/***/ }),
-/* 26 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_preact__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_preact___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_preact__);
-var Alt, View;
-
-__webpack_require__(15);
-
-
-
-window.addEventListener('mousemove', function(e) {
-  g.mouse[0] = e.clientX;
-  return g.mouse[1] = e.clientY;
-});
-
-window.g = {
-  isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
-  colors: ['#aa00ff', '#ff0000', '#0088ff', '#e55c00', '#00d991', '#3600cc', '#bf0000', '#0077b3', '#ff0044', '#00ccff', '#00f2e2', '#d9ca00', '#36cc00', '#bf00b3', '#b27700', '#b20047'],
-  dim: 50,
-  dark: '#171a1c',
-  mouse: [window.innerWidth / 2, window.innerHeight / 2],
-  light: '#fff',
-  slide_duration: 400,
-  small_width: window.innerWidth < 500,
-  origin: 'http://localhost:8787'
-};
-
-Alt = __webpack_require__(16);
-
-window.alt = new Alt();
-
-window.actions = __webpack_require__(7);
-
-window.store = __webpack_require__(17);
-
-View = __webpack_require__(18);
-
-__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0_preact__["render"])(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0_preact__["h"])(View, {}), document.getElementById('checki'));
-
-__webpack_require__(19);
+// exports
 
 
 /***/ }),
-/* 27 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var Component, Slide, Viewer, h, ref,
+var Component, Input, InputFile, cn, h, ref,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
+Input = __webpack_require__(12);
+
 ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
 
-Slide = __webpack_require__(5);
+cn = __webpack_require__(1);
 
-Viewer = (function(superClass) {
-  extend(Viewer, superClass);
+InputFile = (function(superClass) {
+  extend(InputFile, superClass);
 
-  function Viewer(props) {
+  function InputFile(props) {
     this.render = bind(this.render, this);
-    this.onWheelDelta = bind(this.onWheelDelta, this);
-    this.onMouseMove = bind(this.onMouseMove, this);
-    this.imageLoaded = bind(this.imageLoaded, this);
-    this.onUpdate = bind(this.onUpdate, this);
-    Viewer.__super__.constructor.call(this, props);
+    this.onInput = bind(this.onInput, this);
+    this.onClick = bind(this.onClick, this);
+    this.onBlur = bind(this.onBlur, this);
+    InputFile.__super__.constructor.call(this);
     this.state = {
-      loaded: false,
-      scale: 1,
-      min_scale: 1
+      focus: false,
+      initial_value: props.value,
+      value: props.value,
+      clicked: false
     };
-    this.stage = {};
   }
 
-  Viewer.prototype.onUpdate = function() {
-    var str;
-    if (!this._img) {
-      return;
-    }
-    str = 'translate3d(' + this.stage.x + 'px,' + this.stage.y + 'px,0px) scale(' + this.stage.scale + ')';
-    return this._img.style.transform = str;
+  InputFile.prototype.onBlur = function(e) {
+    return console.log('blur');
   };
 
-  Viewer.prototype.imageLoaded = function() {
-    var c_h, c_w, i_h, i_w;
-    this.setInitialScale();
-    if (!this._img) {
-      return;
-    }
-    i_w = this._img.naturalWidth;
-    i_h = this._img.naturalHeight;
-    c_w = this._root.clientWidth;
-    c_h = this._root.clientHeight;
-    this._img.style.width = i_w;
-    this._img.style.height = i_h;
-    TweenLite.set(this.stage, {
-      x: c_w / 2 - i_w / 2,
-      y: c_h / 2 - i_h / 2
-    });
-    this.onUpdate();
-    return this.setState({
-      loaded: true
-    });
-  };
-
-  Viewer.prototype.setInitialScale = function() {
-    var c_h, c_w, i_h, i_w, s, s_h, s_w;
-    if (!this._img) {
-      return;
-    }
-    i_w = this._img.naturalWidth;
-    i_h = this._img.naturalHeight;
-    c_w = this._root.clientWidth;
-    c_h = this._root.clientHeight;
-    if (i_w <= c_w && i_h <= c_h) {
-      return;
-    }
-    s_w = c_w / i_w * 0.9;
-    s_h = c_h / i_h * 0.9;
-    if (s_h < s_w) {
-      s = s_h;
-    } else {
-      s = s_w;
-    }
-    this.state.min_scale = s;
-    this.state.scale = s;
-    return TweenLite.set(this.stage, {
-      scale: s,
-      onUpdate: this.onUpdate
-    });
-  };
-
-  Viewer.prototype.onMouseMove = function(e, get) {
-    var c_h, c_w, c_x, c_y, i_h, i_h0, i_w, i_w0, i_x, i_y, x, y;
-    if (!this._img) {
-      return;
-    }
-    i_w0 = this._img.naturalWidth;
-    i_h0 = this._img.naturalHeight;
-    i_w = this._img.naturalWidth * this.state.scale;
-    i_h = this._img.naturalHeight * this.state.scale;
-    c_w = this._root.clientWidth;
-    c_h = this._root.clientHeight;
-    i_x = (-e.layerX + c_w / 2) * 1.3;
-    c_x = c_w / 2 - i_w0 / 2;
-    i_y = (-(e.clientY - this.pos.top) + c_h / 2) * 1.15;
-    c_y = c_h / 2 - i_h0 / 2;
-    x = c_x + (i_x * (i_w - c_w) / c_w);
-    y = c_y + (i_y * (i_h - c_h) / c_h);
-    if (i_w <= c_w) {
-      x = c_w / 2 - i_w0 / 2;
-    }
-    if (i_h <= c_h) {
-      y = c_h / 2 - i_h0 / 2;
-    }
-    if (get === true) {
-      return [x, y];
-    }
-    return TweenLite.to(this.stage, 0.2, {
-      x: x,
-      y: y,
-      onUpdate: this.onUpdate
-    });
-  };
-
-  Viewer.prototype.onWheelDelta = function(e) {
-    var c_h, c_w, i_h, i_h0, i_w, i_w0, n_s, pos;
-    if (!this._img) {
-      return;
-    }
-    this.state.scale = this.state.scale + e.deltaY * 0.005;
-    if (this.state.scale > 1) {
-      this.state.scale = 1;
-    } else if (this.state.scale < this.state.min_scale) {
-      this.state.scale = this.state.min_scale;
-    }
-    i_w0 = this._img.naturalWidth;
-    i_h0 = this._img.naturalHeight;
-    i_w = this._img.naturalWidth * this.state.scale;
-    i_h = this._img.naturalHeight * this.state.scale;
-    c_w = this._root.clientWidth;
-    c_h = this._root.clientHeight;
-    n_s = {};
-    n_s.scale = this.state.scale;
-    if (i_w <= c_w) {
-      n_s.x = c_w / 2 - i_w0 / 2;
-    }
-    if (i_h <= c_h) {
-      n_s.y = c_h / 2 - i_h0 / 2;
-    }
-    pos = this.onMouseMove(e, true);
-    if (!pos.length) {
-      return;
-    }
-    n_s.x = pos[0];
-    n_s.y = pos[1];
-    n_s.onUpdate = this.onUpdate;
-    return TweenLite.to(this.stage, 0.4, n_s);
-  };
-
-  Viewer.prototype.flushState = function() {
-    this.state.loaded = false;
-    this.stage = {};
-    return this.min_scale = 1;
-  };
-
-  Viewer.prototype.componentDidUpdate = function(props) {
-    return this.pos = this._root.getBoundingClientRect();
-  };
-
-  Viewer.prototype.componentDidMount = function() {
-    this.state.scale = 1;
-    this.state.min_scale = 1;
-    this.pos = this._root.getBoundingClientRect();
-    if (this.state.loaded === false) {
-      if (this._img.complete) {
-        return this.imageLoaded();
-      }
-    }
-  };
-
-  Viewer.prototype.render = function(props) {
-    var loader;
-    if (!this.state.loaded) {
-      loader = h('div', {
-        className: '-i-loader'
+  InputFile.prototype.onClick = function(e) {
+    var e_n;
+    if (this.state.clicked) {
+      this.setState({
+        clicked: false
       });
+      return false;
     }
-    return h('div', {
-      ref: (function(_this) {
-        return function(e) {
-          return _this._root = e;
-        };
-      })(this),
-      onMouseMove: this.onMouseMove,
-      onMouseWheel: this.onWheelDelta,
-      className: '-i-viewer',
-      id: '-i-viewer',
-      onClick: (function(_this) {
-        return function(e) {
-          if (_this.props.onClick) {
-            return _this.props.onClick(e);
-          }
-        };
-      })(this)
-    }, h('img', {
-      id: '-i-viewer-image',
-      onClick: (function(_this) {
-        return function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        };
-      })(this),
-      ref: (function(_this) {
-        return function(e) {
-          return _this._img = e;
-        };
-      })(this),
-      src: this.props.img,
-      onLoad: this.imageLoaded,
-      className: '-i-viewer-image ' + (!this.state.loaded && 'hidden' || "")
-    }), loader);
+    this.setState({
+      clicked: true
+    });
+    e_n = new MouseEvent('click', {
+      'view': window,
+      'bubbles': true,
+      'cancelable': true
+    });
+    return this._file.dispatchEvent(e_n);
   };
 
-  return Viewer;
+  InputFile.prototype.onInput = function(e) {
+    console.log("ON INPUT");
+    this.setState({
+      initial_value: null,
+      value: e.target.files[0].name
+    });
+    return this.props.onInput && this.props.onInput(e);
+  };
+
+  InputFile.prototype.render = function() {
+    var icon, label, style;
+    if (this.props.barColor) {
+      style = {
+        'border-color': this.props.barColor
+      };
+    }
+    return h(Input, {
+      onClick: this.onClick,
+      onFocus: this.onFocus,
+      onBlur: this.onBlur,
+      disabled: this.props.disabled,
+      label: this.props.label,
+      className: cn('file', this.props.className, !this.state.value && 'focus', (this.state.focus || this.state.value) && 'has-data')
+    }, label = h('input', {
+      type: 'text',
+      disabled: true,
+      style: style,
+      className: cn('-i-input-text', !this.state.value && 'hidden'),
+      value: this.state.value
+    }), icon = h('i', {
+      className: cn('material-icons', this.state.value && 'hidden')
+    }, 'file_upload'), h('input', {
+      name: this.props.name,
+      value: this.state.initial_value || this.state.value,
+      type: 'file',
+      ref: (function(_this) {
+        return function(e) {
+          return _this._file = e;
+        };
+      })(this),
+      onBlur: this.onBlur,
+      onChange: this.onInput
+    }));
+  };
+
+  return InputFile;
 
 })(Component);
 
-module.exports = Viewer;
+module.exports = InputFile;
 
 
 /***/ }),
-/* 28 */
+/* 40 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(3)(false);
+// imports
+
+
+// module
+exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n@-webkit-keyframes autofill {\n  to {\n    color: #666;\n    background: transparent; } }\n\n.-i-input {\n  font-family: 'Lato', sans-serif;\n  height: 50px;\n  padding-left: 15px;\n  min-width: 50px;\n  position: relative;\n  overflow: hidden;\n  transition: background 0.1s ease;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n  .-i-input i {\n    color: rgba(255, 255, 255, 0.13);\n    transition: color 0.1s ease; }\n  .-i-input input {\n    font-family: inherit;\n    border: none;\n    background: none;\n    font-size: 14px;\n    line-height: 14px;\n    color: white;\n    font-weight: 100;\n    outline: none;\n    height: 100%;\n    width: calc(100% - 4px);\n    border-bottom: none;\n    padding: 0px 8px;\n    padding-left: 10px; }\n    .-i-input input:-webkit-autofill {\n      -webkit-text-fill-color: cyan;\n      -webkit-animation-name: autofill;\n      -webkit-animation-fill-mode: both; }\n  .-i-input.file > i {\n    margin: 0 auto; }\n  .-i-input input[type=\"file\"] {\n    display: block;\n    width: 66px;\n    height: 25px;\n    clip: rect(0px 0px 0px 0px);\n    position: absolute;\n    left: 0;\n    top: 0; }\n  .-i-input input::-webkit-input-placeholder {\n    font-weight: 200;\n    font-size: 14px;\n    color: rgba(255, 255, 255, 0.15); }\n  .-i-input.disabled input::-webkit-input-placeholder {\n    opacity: 0.2; }\n  .-i-input .label {\n    display: inline-table;\n    padding: 0px 5px;\n    margin-top: 0px;\n    padding-top: 2px;\n    padding-left: 10px;\n    min-width: 90px;\n    border-left: 2px solid rgba(255, 255, 255, 0.13);\n    border-right: 2px solid rgba(255, 255, 255, 0);\n    font-size: 14px;\n    line-height: 14px;\n    font-weight: 400;\n    color: rgba(255, 255, 255, 0.64); }\n  .-i-input.-i-icon-label .label {\n    padding: 0px;\n    min-width: 0px;\n    border: none !important; }\n  .-i-input.file {\n    cursor: pointer; }\n    .-i-input.file input {\n      cursor: pointer !important; }\n    .-i-input.file .label {\n      color: rgba(255, 255, 255, 0.4); }\n  .-i-input.file:hover i {\n    color: white; }\n  .-i-input.has-data input {\n    font-size: 14px; }\n  .-i-input.file:hover {\n    background: rgba(0, 0, 0, 0.1); }\n  .-i-input.focus {\n    background: rgba(0, 0, 0, 0.1); }\n    .-i-input.focus .label {\n      border-left: 2px solid rgba(255, 255, 255, 0);\n      border-right: 2px solid rgba(255, 255, 255, 0.13); }\n  .-i-input.has-data .label {\n    border-left: 2px solid rgba(255, 255, 255, 0);\n    border-right: 2px solid rgba(255, 255, 255, 0.13); }\n  .-i-input.textarea {\n    display: block;\n    height: auto; }\n    .-i-input.textarea .label {\n      border-left: 2px solid rgba(255, 255, 255, 0);\n      border-right: 2px solid rgba(255, 255, 255, 0);\n      margin-top: 8px; }\n    .-i-input.textarea textarea {\n      color: white;\n      font-family: 'Lato', sans-serif;\n      font-weight: 400;\n      font-size: 14px;\n      padding: 10px;\n      width: 100%;\n      outline: none;\n      border: none;\n      background: none;\n      max-width: 100%; }\n    .-i-input.textarea .textarea-bar {\n      position: absolute;\n      height: calc(100% - 14px);\n      width: 2px;\n      left: 0px;\n      top: 8px;\n      background: rgba(255, 255, 255, 0.1); }\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 41 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var Component, Input, InputText, cn, h, ref,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Input = __webpack_require__(12);
+
+ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
+
+cn = __webpack_require__(1);
+
+InputText = (function(superClass) {
+  extend(InputText, superClass);
+
+  function InputText(props) {
+    this.render = bind(this.render, this);
+    this.componentWillUpdate = bind(this.componentWillUpdate, this);
+    this.onKey = bind(this.onKey, this);
+    this.onBlur = bind(this.onBlur, this);
+    this.onInput = bind(this.onInput, this);
+    this.onFocus = bind(this.onFocus, this);
+    InputText.__super__.constructor.call(this);
+    this.state = {
+      focus: false,
+      initial_value: props.value,
+      value: props.value
+    };
+  }
+
+  InputText.prototype.onFocus = function() {
+    if (this.state.focus || this.props.disabled) {
+      return false;
+    }
+    this.setState({
+      focus: true
+    });
+    return this._input.focus();
+  };
+
+  InputText.prototype.onInput = function(e) {
+    return this.props.onInput(e);
+  };
+
+  InputText.prototype.onBlur = function() {
+    if (!this.state.focus) {
+      return false;
+    }
+    this.setState({
+      focus: false
+    });
+    return this._input.blur();
+  };
+
+  InputText.prototype.onKey = function(e) {
+    console.log('TEST');
+    if (e.keyCode === 13) {
+      this.props.onEnter && this.props.onEnter(e);
+    }
+    return this.props.onKeyDown && this.props.onKeyDown(e);
+  };
+
+  InputText.prototype.componentWillUpdate = function(props, state) {
+    if (this.props.value !== props.value) {
+      return this.setState({
+        initial_value: props.value,
+        value: props.value
+      });
+    }
+  };
+
+  InputText.prototype.focus = function() {
+    return this._input.focus();
+  };
+
+  InputText.prototype.render = function() {
+    var props, style;
+    if (this.props.barColor) {
+      style = {
+        'border-color': this.props.barColor
+      };
+    }
+    props = Object.assign({}, this.props, {
+      ref: (function(_this) {
+        return function(e) {
+          return _this._input = e;
+        };
+      })(this),
+      onKeyDown: this.onKey,
+      onFocus: this.onFocus,
+      onBlur: this.onBlur,
+      value: this.props.value,
+      type: this.props.type || 'text',
+      style: style,
+      className: '-i-input-text'
+    });
+    return h(Input, {
+      disabled: this.props.disabled,
+      label: this.props.label,
+      onFocus: this.onFocus,
+      onClick: this.onFocus,
+      icon: this.props.icon,
+      className: cn(this.props.className, this.state.focus && 'focus' || null, (this.state.focus || this.state.value) && 'has-data' || null, this.props.icon_labh && '-i-icon-label' || null)
+    }, h('input', props));
+  };
+
+  return InputText;
+
+})(Component);
+
+module.exports = InputText;
+
+
+/***/ }),
+/* 42 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var Component, InputTextArea, cn, h, ref,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+__webpack_require__(13);
+
+ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
+
+cn = __webpack_require__(1);
+
+InputTextArea = (function(superClass) {
+  extend(InputTextArea, superClass);
+
+  function InputTextArea(props) {
+    this.componentDidMount = bind(this.componentDidMount, this);
+    this.onInput = bind(this.onInput, this);
+    this.resize = bind(this.resize, this);
+    this.onBlur = bind(this.onBlur, this);
+    this.onFocus = bind(this.onFocus, this);
+    this.onClick = bind(this.onClick, this);
+    InputTextArea.__super__.constructor.call(this);
+    this.state = {
+      focus: false,
+      initial_value: props.value,
+      value: props.value
+    };
+  }
+
+  InputTextArea.prototype.onClick = function() {
+    return this._text_area.focus();
+  };
+
+  InputTextArea.prototype.onFocus = function() {
+    if (this.state.focus) {
+      return false;
+    }
+    return this.setState({
+      focus: true
+    });
+  };
+
+  InputTextArea.prototype.onBlur = function() {
+    if (!this.state.focus) {
+      return false;
+    }
+    return this.setState({
+      focus: false
+    });
+  };
+
+  InputTextArea.prototype.resize = function() {
+    return setTimeout((function(_this) {
+      return function() {
+        _this._text_area.style.height = 'auto';
+        return _this._text_area.style.height = _this._text_area.scrollHeight + 'px';
+      };
+    })(this), 0);
+  };
+
+  InputTextArea.prototype.onInput = function(e) {
+    this.resize(e);
+    this.state.value = e.value;
+    return this.props.onInput && this.props.onInput(e);
+  };
+
+  InputTextArea.prototype.componentDidMount = function() {
+    return this.resize();
+  };
+
+  InputTextArea.prototype.render = function() {
+    var area, bar, label;
+    if (this.props.label) {
+      label = h('span', {
+        className: 'label'
+      }, this.props.label);
+    }
+    area = h('textarea', {
+      onBlur: this.onBlur,
+      value: this.props.value,
+      onFocus: this.onFocus,
+      onInput: this.onInput,
+      ref: (function(_this) {
+        return function(e) {
+          return _this._text_area = e;
+        };
+      })(this)
+    }, this.props.value);
+    bar = h('div', {
+      className: 'textarea-bar'
+    });
+    return h('div', {
+      onClick: this.onClick,
+      className: cn('-i-input', this.state.focus && 'focus' || '', 'textarea', this.props.className, this.props.disabled && 'disabled' || '')
+    }, bar, label, area);
+  };
+
+  return InputTextArea;
+
+})(Component);
+
+module.exports = InputTextArea;
+
+
+/***/ }),
+/* 43 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var Component, Modal, Overlay, cn, h, ref,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+__webpack_require__(44);
+
+ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
+
+Overlay = __webpack_require__(10);
+
+cn = __webpack_require__(1);
+
+Modal = (function(superClass) {
+  extend(Modal, superClass);
+
+  function Modal(props) {
+    this.render = bind(this.render, this);
+    this.show = bind(this.show, this);
+    this.update = bind(this.update, this);
+    Modal.__super__.constructor.call(this, props);
+    this.mouse = props.mouse || [window.innerWidth / 2, window.innerHeight / 2];
+    this.stage = {
+      x: 0,
+      y: 0
+    };
+    this.state = {
+      start_radius: 10
+    };
+  }
+
+  Modal.prototype.attr = function(b, a, delta) {
+    return b - (b - a) * delta;
+  };
+
+  Modal.prototype.draw_rect = function(ctx) {
+    var i, j;
+    if (!this._canvas) {
+      return;
+    }
+    ctx.clearRect(0, 0, this._canvas.clientWidth, this._canvas.clientWidth);
+    ctx.beginPath();
+    for (i = j = 0; j <= 3; i = ++j) {
+      ctx.lineTo(this.pos[i].x, this.pos[i].y);
+    }
+    ctx.closePath();
+    return ctx.fill();
+  };
+
+  Modal.prototype.update = function() {
+    var rect;
+    this.ctx = this._canvas.getContext('2d');
+    rect = this._content.getBoundingClientRect();
+    this._canvas.width = this._overlay._overlay.clientWidth;
+    this._canvas.height = this._overlay._overlay.clientHeight;
+    this.ctx.fillStyle = this.props.backColor;
+    this.pos = [
+      {
+        x: rect.left,
+        y: rect.top
+      }, {
+        x: rect.left + rect.width,
+        y: rect.top
+      }, {
+        x: rect.left + rect.width,
+        y: rect.top + rect.height
+      }, {
+        x: rect.left,
+        y: rect.top + rect.height
+      }
+    ];
+    return this.draw_rect(this.ctx);
+  };
+
+  Modal.prototype.show = function() {
+    var i, j, r, rect, results, x, y;
+    rect = this._content.getBoundingClientRect();
+    rect = rect;
+    this.ctx = this._canvas.getContext('2d');
+    this._canvas.width = this._overlay._overlay.clientWidth;
+    this._canvas.height = this._overlay._overlay.clientHeight;
+    this.ctx.fillStyle = this.props.backColor;
+    this.perim = [
+      {
+        x: rect.left,
+        y: rect.top
+      }, {
+        x: rect.left + rect.width,
+        y: rect.top
+      }, {
+        x: rect.left + rect.width,
+        y: rect.top + rect.height
+      }, {
+        x: rect.left,
+        y: rect.top + rect.height
+      }
+    ];
+    r = this.state.start_radius;
+    x = this.mouse[0];
+    y = this.mouse[1];
+    this.perim_start = [
+      {
+        x: x,
+        y: y
+      }, {
+        x: x + r,
+        y: y
+      }, {
+        x: x + r,
+        y: y + r
+      }, {
+        x: x,
+        y: y + r
+      }
+    ];
+    this.pos = this.perim.slice(0);
+    results = [];
+    for (i = j = 3; j >= 0; i = --j) {
+      results.push(TweenLite.fromTo(this.pos[i], 0.2 + (i * 0.1), {
+        x: this.perim_start[i].x,
+        y: this.perim_start[i].y
+      }, {
+        x: this.perim[i].x,
+        y: this.perim[i].y,
+        ease: Elastic.easeOut.config(0.2),
+        onUpdate: (function(_this) {
+          return function() {
+            return _this.draw_rect(_this.ctx);
+          };
+        })(this)
+      }));
+    }
+    return results;
+  };
+
+  Modal.prototype.componentDidUpdate = function(props, state) {
+    if (this.props.show === true && this.props.show !== props.show) {
+      return setTimeout(this.show, 0);
+    }
+  };
+
+  Modal.prototype.componentDidMount = function(props, state) {
+    if (this.props.show === true) {
+      setTimeout(this.show, 0);
+    }
+    return window.addEventListener('resize', this.update);
+  };
+
+  Modal.prototype.componentWillUnmount = function() {
+    return window.removeEventListener('resize', this.update);
+  };
+
+  Modal.prototype.render = function() {
+    return h(Overlay, {
+      className: '-i-modal-wrap',
+      onClick: this.props.onClick,
+      show: this.props.show,
+      ref: (function(_this) {
+        return function(el) {
+          return _this._overlay = el;
+        };
+      })(this)
+    }, h('canvas', {
+      className: '-i-modal-canvas',
+      ref: (function(_this) {
+        return function(el) {
+          return _this._canvas = el;
+        };
+      })(this)
+    }), h('div', {
+      className: '-i-modal-close',
+      onClick: (function(_this) {
+        return function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          _this.props.onClick();
+          return false;
+        };
+      })(this)
+    }, h('i', {
+      className: 'material-icons'
+    }, 'close')), h('div', {
+      onClick: function(e) {
+        return e.stopPropagation();
+      },
+      ref: (function(_this) {
+        return function(el) {
+          return _this._content = el;
+        };
+      })(this),
+      className: cn('-i-modal-content', this.props.className)
+    }, this.props.children));
+  };
+
+  return Modal;
+
+})(Component);
+
+module.exports = Modal;
+
+
+/***/ }),
+/* 44 */
+/***/ (function(module, exports, __webpack_require__) {
+
+
+var content = __webpack_require__(45);
+
+if(typeof content === 'string') content = [[module.i, content, '']];
+
+var transform;
+var insertInto;
+
+
+
+var options = {"hmr":true}
+
+options.transform = transform
+options.insertInto = undefined;
+
+var update = __webpack_require__(4)(content, options);
+
+if(content.locals) module.exports = content.locals;
+
+if(false) {
+	module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Modal.scss", function() {
+		var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Modal.scss");
+
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
+	module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(3)(false);
+// imports
+
+
+// module
+exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-modal-wrap {\n  height: 100%; }\n  .-i-modal-wrap .-i-modal-canvas {\n    height: 100%;\n    position: absolute;\n    left: 0px;\n    width: 100%;\n    top: 0px; }\n  .-i-modal-wrap .-i-modal-content {\n    z-index: 1;\n    position: relative; }\n  .-i-modal-wrap .-i-modal-close {\n    position: absolute;\n    right: 0px;\n    top: 0px;\n    width: 50px;\n    height: 50px;\n    cursor: pointer;\n    align-items: center;\n    display: flex;\n    align-content: center;\n    justify-content: center;\n    color: white;\n    opacity: 0.7;\n    transition: opacity 0.3s ease;\n    z-index: 10; }\n    .-i-modal-wrap .-i-modal-close:hover {\n      opacity: 1; }\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var Component, Grid, GridItem, el, h, ref,
@@ -6863,7 +8932,7 @@ var Component, Grid, GridItem, el, h, ref,
 
 ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
 
-__webpack_require__(50);
+__webpack_require__(47);
 
 el = h;
 
@@ -7335,540 +9404,71 @@ module.exports = {
 
 
 /***/ }),
-/* 29 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var Component, Input, InputFile, cn, h, ref,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
 
-Input = __webpack_require__(8);
+var content = __webpack_require__(48);
 
-ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
+if(typeof content === 'string') content = [[module.i, content, '']];
 
-cn = __webpack_require__(1);
+var transform;
+var insertInto;
 
-InputFile = (function(superClass) {
-  extend(InputFile, superClass);
 
-  function InputFile(props) {
-    this.render = bind(this.render, this);
-    this.onInput = bind(this.onInput, this);
-    this.onClick = bind(this.onClick, this);
-    this.onBlur = bind(this.onBlur, this);
-    this.state = {
-      focus: false,
-      initial_value: props.value,
-      value: props.value,
-      clicked: false
-    };
-  }
 
-  InputFile.prototype.onBlur = function(e) {
-    return console.log('blur');
-  };
+var options = {"hmr":true}
 
-  InputFile.prototype.onClick = function(e) {
-    var e_n;
-    if (this.state.clicked) {
-      this.setState({
-        clicked: false
-      });
-      return false;
-    }
-    this.setState({
-      clicked: true
-    });
-    e_n = new MouseEvent('click', {
-      'view': window,
-      'bubbles': true,
-      'cancelable': true
-    });
-    return this._file.dispatchEvent(e_n);
-  };
+options.transform = transform
+options.insertInto = undefined;
 
-  InputFile.prototype.onInput = function(e) {
-    console.log("ON INPUT");
-    this.setState({
-      initial_value: null,
-      value: e.target.files[0].name
-    });
-    return this.props.onInput && this.props.onInput(e);
-  };
+var update = __webpack_require__(4)(content, options);
 
-  InputFile.prototype.render = function() {
-    var icon, label, style;
-    if (this.props.barColor) {
-      style = {
-        'border-color': this.props.barColor
-      };
-    }
-    return h(Input, {
-      onClick: this.onClick,
-      onFocus: this.onFocus,
-      onBlur: this.onBlur,
-      disabled: this.props.disabled,
-      label: this.props.label,
-      className: cn('file', this.props.className, !this.state.value && 'focus', (this.state.focus || this.state.value) && 'has-data')
-    }, label = h('input', {
-      type: 'text',
-      disabled: true,
-      style: style,
-      className: cn('-i-input-text', !this.state.value && 'hidden'),
-      value: this.state.value
-    }), icon = h('i', {
-      className: cn('material-icons', this.state.value && 'hidden')
-    }, 'file_upload'), h('input', {
-      name: this.props.name,
-      value: this.state.initial_value || this.state.value,
-      type: 'file',
-      ref: (function(_this) {
-        return function(e) {
-          return _this._file = e;
-        };
-      })(this),
-      onBlur: this.onBlur,
-      onChange: this.onInput
-    }));
-  };
+if(content.locals) module.exports = content.locals;
 
-  return InputFile;
+if(false) {
+	module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Grid.scss", function() {
+		var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Grid.scss");
 
-})(Component);
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 
-module.exports = InputFile;
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
+	module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 48 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(3)(false);
+// imports
+
+
+// module
+exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.flex {\n  display: flex; }\n  .flex.down {\n    flex-direction: column; }\n  .flex.right {\n    flex-direction: row; }\n\n.s1 {\n  float: left;\n  width: 8.33333%; }\n\n.s2 {\n  float: left;\n  width: 16.66667%; }\n\n.s3 {\n  float: left;\n  width: 25%; }\n\n.s4 {\n  float: left;\n  width: 33.33333%; }\n\n.s5 {\n  float: left;\n  width: 41.66667%; }\n\n.s6 {\n  float: left;\n  width: 50%; }\n\n.s7 {\n  float: left;\n  width: 58.33333%; }\n\n.s8 {\n  float: left;\n  width: 66.66667%; }\n\n.s9 {\n  float: left;\n  width: 75%; }\n\n.s10 {\n  float: left;\n  width: 83.33333%; }\n\n.s11 {\n  float: left;\n  width: 91.66667%; }\n\n.s12 {\n  float: left;\n  width: 100%; }\n\n.m1 {\n  float: left;\n  width: 8.33333%; }\n\n.m2 {\n  float: left;\n  width: 16.66667%; }\n\n.m3 {\n  float: left;\n  width: 25%; }\n\n.m4 {\n  float: left;\n  width: 33.33333%; }\n\n.m5 {\n  float: left;\n  width: 41.66667%; }\n\n.m6 {\n  float: left;\n  width: 50%; }\n\n.m7 {\n  float: left;\n  width: 58.33333%; }\n\n.m8 {\n  float: left;\n  width: 66.66667%; }\n\n.m9 {\n  float: left;\n  width: 75%; }\n\n.m10 {\n  float: left;\n  width: 83.33333%; }\n\n.m11 {\n  float: left;\n  width: 91.66667%; }\n\n.m12 {\n  float: left;\n  width: 100%; }\n\n.pad-0-0 {\n  padding: 0px 0px; }\n\n.pad-0-5 {\n  padding: 0px 5px; }\n\n.pad-0-10 {\n  padding: 0px 10px; }\n\n.pad-0-15 {\n  padding: 0px 15px; }\n\n.pad-0-20 {\n  padding: 0px 20px; }\n\n.pad-0-25 {\n  padding: 0px 25px; }\n\n.pad-0-30 {\n  padding: 0px 30px; }\n\n.pad-0-35 {\n  padding: 0px 35px; }\n\n.pad-0-40 {\n  padding: 0px 40px; }\n\n.pad-0-45 {\n  padding: 0px 45px; }\n\n.pad-0-50 {\n  padding: 0px 50px; }\n\n.pad-5-0 {\n  padding: 5px 0px; }\n\n.pad-5-5 {\n  padding: 5px 5px; }\n\n.pad-5-10 {\n  padding: 5px 10px; }\n\n.pad-5-15 {\n  padding: 5px 15px; }\n\n.pad-5-20 {\n  padding: 5px 20px; }\n\n.pad-5-25 {\n  padding: 5px 25px; }\n\n.pad-5-30 {\n  padding: 5px 30px; }\n\n.pad-5-35 {\n  padding: 5px 35px; }\n\n.pad-5-40 {\n  padding: 5px 40px; }\n\n.pad-5-45 {\n  padding: 5px 45px; }\n\n.pad-5-50 {\n  padding: 5px 50px; }\n\n.pad-10-0 {\n  padding: 10px 0px; }\n\n.pad-10-5 {\n  padding: 10px 5px; }\n\n.pad-10-10 {\n  padding: 10px 10px; }\n\n.pad-10-15 {\n  padding: 10px 15px; }\n\n.pad-10-20 {\n  padding: 10px 20px; }\n\n.pad-10-25 {\n  padding: 10px 25px; }\n\n.pad-10-30 {\n  padding: 10px 30px; }\n\n.pad-10-35 {\n  padding: 10px 35px; }\n\n.pad-10-40 {\n  padding: 10px 40px; }\n\n.pad-10-45 {\n  padding: 10px 45px; }\n\n.pad-10-50 {\n  padding: 10px 50px; }\n\n.pad-15-0 {\n  padding: 15px 0px; }\n\n.pad-15-5 {\n  padding: 15px 5px; }\n\n.pad-15-10 {\n  padding: 15px 10px; }\n\n.pad-15-15 {\n  padding: 15px 15px; }\n\n.pad-15-20 {\n  padding: 15px 20px; }\n\n.pad-15-25 {\n  padding: 15px 25px; }\n\n.pad-15-30 {\n  padding: 15px 30px; }\n\n.pad-15-35 {\n  padding: 15px 35px; }\n\n.pad-15-40 {\n  padding: 15px 40px; }\n\n.pad-15-45 {\n  padding: 15px 45px; }\n\n.pad-15-50 {\n  padding: 15px 50px; }\n\n.pad-20-0 {\n  padding: 20px 0px; }\n\n.pad-20-5 {\n  padding: 20px 5px; }\n\n.pad-20-10 {\n  padding: 20px 10px; }\n\n.pad-20-15 {\n  padding: 20px 15px; }\n\n.pad-20-20 {\n  padding: 20px 20px; }\n\n.pad-20-25 {\n  padding: 20px 25px; }\n\n.pad-20-30 {\n  padding: 20px 30px; }\n\n.pad-20-35 {\n  padding: 20px 35px; }\n\n.pad-20-40 {\n  padding: 20px 40px; }\n\n.pad-20-45 {\n  padding: 20px 45px; }\n\n.pad-20-50 {\n  padding: 20px 50px; }\n\n.pad-25-0 {\n  padding: 25px 0px; }\n\n.pad-25-5 {\n  padding: 25px 5px; }\n\n.pad-25-10 {\n  padding: 25px 10px; }\n\n.pad-25-15 {\n  padding: 25px 15px; }\n\n.pad-25-20 {\n  padding: 25px 20px; }\n\n.pad-25-25 {\n  padding: 25px 25px; }\n\n.pad-25-30 {\n  padding: 25px 30px; }\n\n.pad-25-35 {\n  padding: 25px 35px; }\n\n.pad-25-40 {\n  padding: 25px 40px; }\n\n.pad-25-45 {\n  padding: 25px 45px; }\n\n.pad-25-50 {\n  padding: 25px 50px; }\n\n.pad-30-0 {\n  padding: 30px 0px; }\n\n.pad-30-5 {\n  padding: 30px 5px; }\n\n.pad-30-10 {\n  padding: 30px 10px; }\n\n.pad-30-15 {\n  padding: 30px 15px; }\n\n.pad-30-20 {\n  padding: 30px 20px; }\n\n.pad-30-25 {\n  padding: 30px 25px; }\n\n.pad-30-30 {\n  padding: 30px 30px; }\n\n.pad-30-35 {\n  padding: 30px 35px; }\n\n.pad-30-40 {\n  padding: 30px 40px; }\n\n.pad-30-45 {\n  padding: 30px 45px; }\n\n.pad-30-50 {\n  padding: 30px 50px; }\n\n.pad-35-0 {\n  padding: 35px 0px; }\n\n.pad-35-5 {\n  padding: 35px 5px; }\n\n.pad-35-10 {\n  padding: 35px 10px; }\n\n.pad-35-15 {\n  padding: 35px 15px; }\n\n.pad-35-20 {\n  padding: 35px 20px; }\n\n.pad-35-25 {\n  padding: 35px 25px; }\n\n.pad-35-30 {\n  padding: 35px 30px; }\n\n.pad-35-35 {\n  padding: 35px 35px; }\n\n.pad-35-40 {\n  padding: 35px 40px; }\n\n.pad-35-45 {\n  padding: 35px 45px; }\n\n.pad-35-50 {\n  padding: 35px 50px; }\n\n.pad-40-0 {\n  padding: 40px 0px; }\n\n.pad-40-5 {\n  padding: 40px 5px; }\n\n.pad-40-10 {\n  padding: 40px 10px; }\n\n.pad-40-15 {\n  padding: 40px 15px; }\n\n.pad-40-20 {\n  padding: 40px 20px; }\n\n.pad-40-25 {\n  padding: 40px 25px; }\n\n.pad-40-30 {\n  padding: 40px 30px; }\n\n.pad-40-35 {\n  padding: 40px 35px; }\n\n.pad-40-40 {\n  padding: 40px 40px; }\n\n.pad-40-45 {\n  padding: 40px 45px; }\n\n.pad-40-50 {\n  padding: 40px 50px; }\n\n.pad-45-0 {\n  padding: 45px 0px; }\n\n.pad-45-5 {\n  padding: 45px 5px; }\n\n.pad-45-10 {\n  padding: 45px 10px; }\n\n.pad-45-15 {\n  padding: 45px 15px; }\n\n.pad-45-20 {\n  padding: 45px 20px; }\n\n.pad-45-25 {\n  padding: 45px 25px; }\n\n.pad-45-30 {\n  padding: 45px 30px; }\n\n.pad-45-35 {\n  padding: 45px 35px; }\n\n.pad-45-40 {\n  padding: 45px 40px; }\n\n.pad-45-45 {\n  padding: 45px 45px; }\n\n.pad-45-50 {\n  padding: 45px 50px; }\n\n.pad-50-0 {\n  padding: 50px 0px; }\n\n.pad-50-5 {\n  padding: 50px 5px; }\n\n.pad-50-10 {\n  padding: 50px 10px; }\n\n.pad-50-15 {\n  padding: 50px 15px; }\n\n.pad-50-20 {\n  padding: 50px 20px; }\n\n.pad-50-25 {\n  padding: 50px 25px; }\n\n.pad-50-30 {\n  padding: 50px 30px; }\n\n.pad-50-35 {\n  padding: 50px 35px; }\n\n.pad-50-40 {\n  padding: 50px 40px; }\n\n.pad-50-45 {\n  padding: 50px 45px; }\n\n.pad-50-50 {\n  padding: 50px 50px; }\n\n.mar-0-0 {\n  margin: 0px 0px; }\n\n.mar-0-5 {\n  margin: 0px 5px; }\n\n.mar-0-10 {\n  margin: 0px 10px; }\n\n.mar-0-15 {\n  margin: 0px 15px; }\n\n.mar-0-20 {\n  margin: 0px 20px; }\n\n.mar-0-25 {\n  margin: 0px 25px; }\n\n.mar-0-30 {\n  margin: 0px 30px; }\n\n.mar-0-35 {\n  margin: 0px 35px; }\n\n.mar-0-40 {\n  margin: 0px 40px; }\n\n.mar-0-45 {\n  margin: 0px 45px; }\n\n.mar-0-50 {\n  margin: 0px 50px; }\n\n.mar-5-0 {\n  margin: 5px 0px; }\n\n.mar-5-5 {\n  margin: 5px 5px; }\n\n.mar-5-10 {\n  margin: 5px 10px; }\n\n.mar-5-15 {\n  margin: 5px 15px; }\n\n.mar-5-20 {\n  margin: 5px 20px; }\n\n.mar-5-25 {\n  margin: 5px 25px; }\n\n.mar-5-30 {\n  margin: 5px 30px; }\n\n.mar-5-35 {\n  margin: 5px 35px; }\n\n.mar-5-40 {\n  margin: 5px 40px; }\n\n.mar-5-45 {\n  margin: 5px 45px; }\n\n.mar-5-50 {\n  margin: 5px 50px; }\n\n.mar-10-0 {\n  margin: 10px 0px; }\n\n.mar-10-5 {\n  margin: 10px 5px; }\n\n.mar-10-10 {\n  margin: 10px 10px; }\n\n.mar-10-15 {\n  margin: 10px 15px; }\n\n.mar-10-20 {\n  margin: 10px 20px; }\n\n.mar-10-25 {\n  margin: 10px 25px; }\n\n.mar-10-30 {\n  margin: 10px 30px; }\n\n.mar-10-35 {\n  margin: 10px 35px; }\n\n.mar-10-40 {\n  margin: 10px 40px; }\n\n.mar-10-45 {\n  margin: 10px 45px; }\n\n.mar-10-50 {\n  margin: 10px 50px; }\n\n.mar-15-0 {\n  margin: 15px 0px; }\n\n.mar-15-5 {\n  margin: 15px 5px; }\n\n.mar-15-10 {\n  margin: 15px 10px; }\n\n.mar-15-15 {\n  margin: 15px 15px; }\n\n.mar-15-20 {\n  margin: 15px 20px; }\n\n.mar-15-25 {\n  margin: 15px 25px; }\n\n.mar-15-30 {\n  margin: 15px 30px; }\n\n.mar-15-35 {\n  margin: 15px 35px; }\n\n.mar-15-40 {\n  margin: 15px 40px; }\n\n.mar-15-45 {\n  margin: 15px 45px; }\n\n.mar-15-50 {\n  margin: 15px 50px; }\n\n.mar-20-0 {\n  margin: 20px 0px; }\n\n.mar-20-5 {\n  margin: 20px 5px; }\n\n.mar-20-10 {\n  margin: 20px 10px; }\n\n.mar-20-15 {\n  margin: 20px 15px; }\n\n.mar-20-20 {\n  margin: 20px 20px; }\n\n.mar-20-25 {\n  margin: 20px 25px; }\n\n.mar-20-30 {\n  margin: 20px 30px; }\n\n.mar-20-35 {\n  margin: 20px 35px; }\n\n.mar-20-40 {\n  margin: 20px 40px; }\n\n.mar-20-45 {\n  margin: 20px 45px; }\n\n.mar-20-50 {\n  margin: 20px 50px; }\n\n.mar-25-0 {\n  margin: 25px 0px; }\n\n.mar-25-5 {\n  margin: 25px 5px; }\n\n.mar-25-10 {\n  margin: 25px 10px; }\n\n.mar-25-15 {\n  margin: 25px 15px; }\n\n.mar-25-20 {\n  margin: 25px 20px; }\n\n.mar-25-25 {\n  margin: 25px 25px; }\n\n.mar-25-30 {\n  margin: 25px 30px; }\n\n.mar-25-35 {\n  margin: 25px 35px; }\n\n.mar-25-40 {\n  margin: 25px 40px; }\n\n.mar-25-45 {\n  margin: 25px 45px; }\n\n.mar-25-50 {\n  margin: 25px 50px; }\n\n.mar-30-0 {\n  margin: 30px 0px; }\n\n.mar-30-5 {\n  margin: 30px 5px; }\n\n.mar-30-10 {\n  margin: 30px 10px; }\n\n.mar-30-15 {\n  margin: 30px 15px; }\n\n.mar-30-20 {\n  margin: 30px 20px; }\n\n.mar-30-25 {\n  margin: 30px 25px; }\n\n.mar-30-30 {\n  margin: 30px 30px; }\n\n.mar-30-35 {\n  margin: 30px 35px; }\n\n.mar-30-40 {\n  margin: 30px 40px; }\n\n.mar-30-45 {\n  margin: 30px 45px; }\n\n.mar-30-50 {\n  margin: 30px 50px; }\n\n.mar-35-0 {\n  margin: 35px 0px; }\n\n.mar-35-5 {\n  margin: 35px 5px; }\n\n.mar-35-10 {\n  margin: 35px 10px; }\n\n.mar-35-15 {\n  margin: 35px 15px; }\n\n.mar-35-20 {\n  margin: 35px 20px; }\n\n.mar-35-25 {\n  margin: 35px 25px; }\n\n.mar-35-30 {\n  margin: 35px 30px; }\n\n.mar-35-35 {\n  margin: 35px 35px; }\n\n.mar-35-40 {\n  margin: 35px 40px; }\n\n.mar-35-45 {\n  margin: 35px 45px; }\n\n.mar-35-50 {\n  margin: 35px 50px; }\n\n.mar-40-0 {\n  margin: 40px 0px; }\n\n.mar-40-5 {\n  margin: 40px 5px; }\n\n.mar-40-10 {\n  margin: 40px 10px; }\n\n.mar-40-15 {\n  margin: 40px 15px; }\n\n.mar-40-20 {\n  margin: 40px 20px; }\n\n.mar-40-25 {\n  margin: 40px 25px; }\n\n.mar-40-30 {\n  margin: 40px 30px; }\n\n.mar-40-35 {\n  margin: 40px 35px; }\n\n.mar-40-40 {\n  margin: 40px 40px; }\n\n.mar-40-45 {\n  margin: 40px 45px; }\n\n.mar-40-50 {\n  margin: 40px 50px; }\n\n.mar-45-0 {\n  margin: 45px 0px; }\n\n.mar-45-5 {\n  margin: 45px 5px; }\n\n.mar-45-10 {\n  margin: 45px 10px; }\n\n.mar-45-15 {\n  margin: 45px 15px; }\n\n.mar-45-20 {\n  margin: 45px 20px; }\n\n.mar-45-25 {\n  margin: 45px 25px; }\n\n.mar-45-30 {\n  margin: 45px 30px; }\n\n.mar-45-35 {\n  margin: 45px 35px; }\n\n.mar-45-40 {\n  margin: 45px 40px; }\n\n.mar-45-45 {\n  margin: 45px 45px; }\n\n.mar-45-50 {\n  margin: 45px 50px; }\n\n.mar-50-0 {\n  margin: 50px 0px; }\n\n.mar-50-5 {\n  margin: 50px 5px; }\n\n.mar-50-10 {\n  margin: 50px 10px; }\n\n.mar-50-15 {\n  margin: 50px 15px; }\n\n.mar-50-20 {\n  margin: 50px 20px; }\n\n.mar-50-25 {\n  margin: 50px 25px; }\n\n.mar-50-30 {\n  margin: 50px 30px; }\n\n.mar-50-35 {\n  margin: 50px 35px; }\n\n.mar-50-40 {\n  margin: 50px 40px; }\n\n.mar-50-45 {\n  margin: 50px 45px; }\n\n.mar-50-50 {\n  margin: 50px 50px; }\n\n@media only screen and (max-width: 600px) {\n  .s1 {\n    float: left;\n    width: 8.33333%; }\n  .s2 {\n    float: left;\n    width: 16.66667%; }\n  .s3 {\n    float: left;\n    width: 25%; }\n  .s4 {\n    float: left;\n    width: 33.33333%; }\n  .s5 {\n    float: left;\n    width: 41.66667%; }\n  .s6 {\n    float: left;\n    width: 50%; }\n  .s7 {\n    float: left;\n    width: 58.33333%; }\n  .s8 {\n    float: left;\n    width: 66.66667%; }\n  .s9 {\n    float: left;\n    width: 75%; }\n  .s10 {\n    float: left;\n    width: 83.33333%; }\n  .s11 {\n    float: left;\n    width: 91.66667%; }\n  .s12 {\n    float: left;\n    width: 100%; } }\n\n.-i-s-fixed {\n  transform: none !important;\n  flex-shrink: 0; }\n\n.-i-s-scroll {\n  overflow-x: scroll;\n  overflow-y: hidden; }\n\n.-i-s-scroll.-i-s-vertical {\n  overflow-y: scroll;\n  overflow-x: hidden; }\n\n.-i-s-center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-s-static {\n  box-sizing: border-box;\n  position: relative;\n  flex-direction: row;\n  display: flex;\n  overflow: hidden; }\n  .-i-s-static.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-outer {\n  position: relative;\n  overflow: hidden; }\n  .-i-s-outer ::-webkit-scrollbar {\n    display: none; }\n\n.-i-s-inner {\n  min-height: 100%;\n  display: flex; }\n  .-i-s-inner > .-i-s-in {\n    transition: transform 0.3s cubic-bezier(0, 0.93, 0.27, 1);\n    transform: scale(1) rotateY(0deg) !important; }\n  .-i-s-inner > .-i-s-in_pre.-i-s-right {\n    transform-origin: 0% 50%;\n    transform: scale(1) rotateY(10deg); }\n  .-i-s-inner > .-i-s-in_pre.-i-s-left {\n    transform-origin: 100% 50%;\n    transform: scale(1) rotateY(-10deg); }\n  .-i-s-inner.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-inner > .-i-s-outer {\n  flex-shrink: 0; }\n\n.-i-s-inner > .-i-s-static {\n  flex-shrink: 0; }\n\n.-i-s-horizontal {\n  flex-direction: row; }\n\n.-i-s-vertical {\n  flex-direction: column; }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-right {\n    transform-origin: 50% 0%;\n    transform: scale(1) rotateX(-60deg); }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-left {\n    transform-origin: 50% 100%;\n    transform: scale(1) rotateX(60deg); }\n  .-i-s-vertical.-i-s-reverse {\n    flex-direction: column-reverse; }\n\n.-i-viewer {\n  background: black;\n  position: absolute;\n  width: 100vw;\n  height: calc(100vh - 50px);\n  top: 50px;\n  left: 0;\n  overflow: hidden;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-viewer-image {\n  border-radius: 10px;\n  position: absolute;\n  left: 0;\n  top: 0;\n  transition: opacity 0.3s ease;\n  opacity: 1; }\n  .-i-viewer-image:hidden {\n    opacity: 0; }\n\n.-i-loader {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin: auto;\n  width: 10px;\n  height: 10px;\n  background-color: #FFFFFF;\n  animation: rotate 1s infinite ease-in-out;\n  transition: opacity 1s ease; }\n\n.-i-loader-stop {\n  animation-iteration-count: 0;\n  opacity: 0.2;\n  transform: scale(0.5); }\n\n@keyframes rotate {\n  0% {\n    transform: perspective(20px) rotateX(0deg) rotateY(0deg); }\n  50% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(0deg); }\n  100% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(-180deg); } }\n\n.-i-grid {\n  -webkit-overflow-scrolling: touch;\n  transform: translateZ(0);\n  position: relative;\n  width: 100%;\n  overflow: scroll;\n  height: 100%; }\n  .-i-grid .-i-grid-item-outer {\n    transform-origin: center center 0px;\n    -webkit-transform-origin: center center 0px;\n    position: absolute;\n    box-sizing: border-box;\n    backface-visibility: hidden; }\n    .-i-grid .-i-grid-item-outer::before {\n      will-change: transform; }\n  .-i-grid .-i-grid-item-inner {\n    backface-visibility: hidden;\n    transform-style: preserve-3d;\n    width: 100%;\n    height: 100%;\n    position: relative; }\n  .-i-grid .-i-grid-inner {\n    -webkit-overflow-scrolling: touch;\n    width: 100%;\n    height: auto;\n    position: relative; }\n  .-i-grid .-i-loader {\n    position: absolute;\n    left: calc( 50% - 5px);\n    bottom: 25px; }\n\n.-i-grid-fixed {\n  height: auto;\n  overflow: visible; }\n", ""]);
+
+// exports
 
 
 /***/ }),
-/* 30 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Component, Input, InputText, cn, h, ref,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
-
-Input = __webpack_require__(8);
-
-ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
-
-cn = __webpack_require__(1);
-
-InputText = (function(superClass) {
-  extend(InputText, superClass);
-
-  function InputText(props) {
-    this.render = bind(this.render, this);
-    this.componentWillUpdate = bind(this.componentWillUpdate, this);
-    this.onKey = bind(this.onKey, this);
-    this.onBlur = bind(this.onBlur, this);
-    this.onInput = bind(this.onInput, this);
-    this.onFocus = bind(this.onFocus, this);
-    this.state = {
-      focus: false,
-      initial_value: props.value,
-      value: props.value
-    };
-  }
-
-  InputText.prototype.onFocus = function() {
-    if (this.state.focus || this.props.disabled) {
-      return false;
-    }
-    this.setState({
-      focus: true
-    });
-    return this._input.focus();
-  };
-
-  InputText.prototype.onInput = function(e) {
-    return this.props.onInput(e);
-  };
-
-  InputText.prototype.onBlur = function() {
-    if (!this.state.focus) {
-      return false;
-    }
-    this.setState({
-      focus: false
-    });
-    return this._input.blur();
-  };
-
-  InputText.prototype.onKey = function(e) {
-    console.log('TEST');
-    if (e.keyCode === 13) {
-      this.props.onEnter && this.props.onEnter(e);
-    }
-    return this.props.onKeyDown && this.props.onKeyDown(e);
-  };
-
-  InputText.prototype.componentWillUpdate = function(props, state) {
-    if (this.props.value !== props.value) {
-      return this.setState({
-        initial_value: props.value,
-        value: props.value
-      });
-    }
-  };
-
-  InputText.prototype.focus = function() {
-    return this._input.focus();
-  };
-
-  InputText.prototype.render = function() {
-    var props, style;
-    if (this.props.barColor) {
-      style = {
-        'border-color': this.props.barColor
-      };
-    }
-    props = Object.assign({}, this.props, {
-      ref: (function(_this) {
-        return function(e) {
-          return _this._input = e;
-        };
-      })(this),
-      onKeyDown: this.onKey,
-      onFocus: this.onFocus,
-      onBlur: this.onBlur,
-      value: this.props.value,
-      type: this.props.type || 'text',
-      style: style,
-      className: '-i-input-text'
-    });
-    return h(Input, {
-      disabled: this.props.disabled,
-      label: this.props.label,
-      onFocus: this.onFocus,
-      onClick: this.onFocus,
-      icon: this.props.icon,
-      className: cn(this.props.className, this.state.focus && 'focus' || null, (this.state.focus || this.state.value) && 'has-data' || null, this.props.icon_labh && '-i-icon-label' || null)
-    }, h('input', props));
-  };
-
-  return InputText;
-
-})(Component);
-
-module.exports = InputText;
-
-
-/***/ }),
-/* 31 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Component, InputTextArea, cn, h, ref,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
-
-__webpack_require__(11);
-
-ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
-
-cn = __webpack_require__(1);
-
-InputTextArea = (function(superClass) {
-  extend(InputTextArea, superClass);
-
-  function InputTextArea(props) {
-    this.componentDidMount = bind(this.componentDidMount, this);
-    this.onInput = bind(this.onInput, this);
-    this.resize = bind(this.resize, this);
-    this.onBlur = bind(this.onBlur, this);
-    this.onFocus = bind(this.onFocus, this);
-    this.onClick = bind(this.onClick, this);
-    this.state = {
-      focus: false,
-      initial_value: props.value,
-      value: props.value
-    };
-  }
-
-  InputTextArea.prototype.onClick = function() {
-    return this._text_area.focus();
-  };
-
-  InputTextArea.prototype.onFocus = function() {
-    if (this.state.focus) {
-      return false;
-    }
-    return this.setState({
-      focus: true
-    });
-  };
-
-  InputTextArea.prototype.onBlur = function() {
-    if (!this.state.focus) {
-      return false;
-    }
-    return this.setState({
-      focus: false
-    });
-  };
-
-  InputTextArea.prototype.resize = function() {
-    return setTimeout((function(_this) {
-      return function() {
-        _this._text_area.style.height = 'auto';
-        return _this._text_area.style.height = _this._text_area.scrollHeight + 'px';
-      };
-    })(this), 0);
-  };
-
-  InputTextArea.prototype.onInput = function(e) {
-    this.resize(e);
-    this.state.value = e.value;
-    return this.props.onInput && this.props.onInput(e);
-  };
-
-  InputTextArea.prototype.componentDidMount = function() {
-    return this.resize();
-  };
-
-  InputTextArea.prototype.render = function() {
-    var area, bar, label;
-    if (this.props.label) {
-      label = h('span', {
-        className: 'label'
-      }, this.props.label);
-    }
-    area = h('textarea', {
-      onBlur: this.onBlur,
-      value: this.props.value,
-      onFocus: this.onFocus,
-      onInput: this.onInput,
-      ref: (function(_this) {
-        return function(e) {
-          return _this._text_area = e;
-        };
-      })(this)
-    }, this.props.value);
-    bar = h('div', {
-      className: 'textarea-bar'
-    });
-    return h('div', {
-      onClick: this.onClick,
-      className: cn('-i-input', this.state.focus && 'focus' || '', 'textarea', this.props.className, this.props.disabled && 'disabled' || '')
-    }, bar, label, area);
-  };
-
-  return InputTextArea;
-
-})(Component);
-
-module.exports = InputTextArea;
-
-
-/***/ }),
-/* 32 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Component, Modal, Overlay, cn, h, ref,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
-
-__webpack_require__(51);
-
-ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
-
-Overlay = __webpack_require__(9);
-
-cn = __webpack_require__(1);
-
-Modal = (function(superClass) {
-  extend(Modal, superClass);
-
-  function Modal(props) {
-    this.render = bind(this.render, this);
-    this.show = bind(this.show, this);
-    this.update = bind(this.update, this);
-    Modal.__super__.constructor.call(this, props);
-    this.mouse = props.mouse || [window.innerWidth / 2, window.innerHeight / 2];
-    this.stage = {
-      x: 0,
-      y: 0
-    };
-    this.state = {
-      start_radius: 10
-    };
-  }
-
-  Modal.prototype.attr = function(b, a, delta) {
-    return b - (b - a) * delta;
-  };
-
-  Modal.prototype.draw_rect = function(ctx) {
-    var i, j;
-    if (!this._canvas) {
-      return;
-    }
-    ctx.clearRect(0, 0, this._canvas.clientWidth, this._canvas.clientWidth);
-    ctx.beginPath();
-    for (i = j = 0; j <= 3; i = ++j) {
-      ctx.lineTo(this.pos[i].x, this.pos[i].y);
-    }
-    ctx.closePath();
-    return ctx.fill();
-  };
-
-  Modal.prototype.update = function() {
-    var rect;
-    this.ctx = this._canvas.getContext('2d');
-    rect = this._content.getBoundingClientRect();
-    this._canvas.width = this._overlay._overlay.clientWidth;
-    this._canvas.height = this._overlay._overlay.clientHeight;
-    this.ctx.fillStyle = this.props.backColor;
-    this.pos = [
-      {
-        x: rect.left,
-        y: rect.top
-      }, {
-        x: rect.left + rect.width,
-        y: rect.top
-      }, {
-        x: rect.left + rect.width,
-        y: rect.top + rect.height
-      }, {
-        x: rect.left,
-        y: rect.top + rect.height
-      }
-    ];
-    return this.draw_rect(this.ctx);
-  };
-
-  Modal.prototype.show = function() {
-    var i, j, r, rect, results, x, y;
-    rect = this._content.getBoundingClientRect();
-    rect = rect;
-    this.ctx = this._canvas.getContext('2d');
-    this._canvas.width = this._overlay._overlay.clientWidth;
-    this._canvas.height = this._overlay._overlay.clientHeight;
-    this.ctx.fillStyle = this.props.backColor;
-    this.perim = [
-      {
-        x: rect.left,
-        y: rect.top
-      }, {
-        x: rect.left + rect.width,
-        y: rect.top
-      }, {
-        x: rect.left + rect.width,
-        y: rect.top + rect.height
-      }, {
-        x: rect.left,
-        y: rect.top + rect.height
-      }
-    ];
-    r = this.state.start_radius;
-    x = this.mouse[0];
-    y = this.mouse[1];
-    this.perim_start = [
-      {
-        x: x,
-        y: y
-      }, {
-        x: x + r,
-        y: y
-      }, {
-        x: x + r,
-        y: y + r
-      }, {
-        x: x,
-        y: y + r
-      }
-    ];
-    this.pos = this.perim.slice(0);
-    results = [];
-    for (i = j = 3; j >= 0; i = --j) {
-      results.push(TweenLite.fromTo(this.pos[i], 0.2 + (i * 0.1), {
-        x: this.perim_start[i].x,
-        y: this.perim_start[i].y
-      }, {
-        x: this.perim[i].x,
-        y: this.perim[i].y,
-        ease: Elastic.easeOut.config(0.2),
-        onUpdate: (function(_this) {
-          return function() {
-            return _this.draw_rect(_this.ctx);
-          };
-        })(this)
-      }));
-    }
-    return results;
-  };
-
-  Modal.prototype.componentDidUpdate = function(props, state) {
-    if (this.props.show === true && this.props.show !== props.show) {
-      return setTimeout(this.show, 0);
-    }
-  };
-
-  Modal.prototype.componentDidMount = function(props, state) {
-    if (this.props.show === true) {
-      setTimeout(this.show, 0);
-    }
-    return window.addEventListener('resize', this.update);
-  };
-
-  Modal.prototype.componentWillUnmount = function() {
-    return window.removeEventListener('resize', this.update);
-  };
-
-  Modal.prototype.render = function() {
-    return h(Overlay, {
-      className: '-i-modal-wrap',
-      onClick: this.props.onClick,
-      show: this.props.show,
-      ref: (function(_this) {
-        return function(el) {
-          return _this._overlay = el;
-        };
-      })(this)
-    }, h('canvas', {
-      className: '-i-modal-canvas',
-      ref: (function(_this) {
-        return function(el) {
-          return _this._canvas = el;
-        };
-      })(this)
-    }), h('div', {
-      className: '-i-modal-close',
-      onClick: (function(_this) {
-        return function(e) {
-          e.stopPropagation();
-          e.preventDefault();
-          _this.props.onClick();
-          return false;
-        };
-      })(this)
-    }, h('i', {
-      className: 'material-icons'
-    }, 'close')), h('div', {
-      onClick: function(e) {
-        return e.stopPropagation();
-      },
-      ref: (function(_this) {
-        return function(el) {
-          return _this._content = el;
-        };
-      })(this),
-      className: cn('-i-modal-content', this.props.className)
-    }, this.props.children));
-  };
-
-  return Modal;
-
-})(Component);
-
-module.exports = Modal;
-
-
-/***/ }),
-/* 33 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var Button, Component, Slide, SlideButton, cn, h, ref,
@@ -7880,11 +9480,11 @@ ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
 
 cn = __webpack_require__(1);
 
-Button = __webpack_require__(10);
+Button = __webpack_require__(11);
 
 Slide = __webpack_require__(5);
 
-__webpack_require__(49);
+__webpack_require__(50);
 
 SlideButton = (function(superClass) {
   extend(SlideButton, superClass);
@@ -8036,24 +9636,60 @@ module.exports = SlideButton;
 
 
 /***/ }),
-/* 34 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(undefined);
-// imports
+
+var content = __webpack_require__(51);
+
+if(typeof content === 'string') content = [[module.i, content, '']];
+
+var transform;
+var insertInto;
 
 
-// module
-exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-btn {\n  cursor: pointer;\n  width: 100%;\n  position: relative;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center;\n  display: inline-flex; }\n  .-i-btn .label {\n    padding-left: 10px; }\n  .-i-btn i {\n    font-size: 24px; }\n  .-i-btn.disabled {\n    cursor: default;\n    pointer-events: none;\n    opacity: 0.3; }\n", ""]);
 
-// exports
+var options = {"hmr":true}
 
+options.transform = transform
+options.insertInto = undefined;
+
+var update = __webpack_require__(4)(content, options);
+
+if(content.locals) module.exports = content.locals;
+
+if(false) {
+	module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./SlideButton.scss", function() {
+		var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./SlideButton.scss");
+
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
+	module.hot.dispose(function() { update(); });
+}
 
 /***/ }),
-/* 35 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(undefined);
+exports = module.exports = __webpack_require__(3)(false);
 // imports
 
 
@@ -8064,1226 +9700,385 @@ exports.push([module.i, ".-i-slide-btn {\n  cursor: pointer; }\n  .-i-slide-btn.
 
 
 /***/ }),
-/* 36 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(3)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.flex {\n  display: flex; }\n  .flex.down {\n    flex-direction: column; }\n  .flex.right {\n    flex-direction: row; }\n\n.s1 {\n  float: left;\n  width: 8.33333%; }\n\n.s2 {\n  float: left;\n  width: 16.66667%; }\n\n.s3 {\n  float: left;\n  width: 25%; }\n\n.s4 {\n  float: left;\n  width: 33.33333%; }\n\n.s5 {\n  float: left;\n  width: 41.66667%; }\n\n.s6 {\n  float: left;\n  width: 50%; }\n\n.s7 {\n  float: left;\n  width: 58.33333%; }\n\n.s8 {\n  float: left;\n  width: 66.66667%; }\n\n.s9 {\n  float: left;\n  width: 75%; }\n\n.s10 {\n  float: left;\n  width: 83.33333%; }\n\n.s11 {\n  float: left;\n  width: 91.66667%; }\n\n.s12 {\n  float: left;\n  width: 100%; }\n\n.m1 {\n  float: left;\n  width: 8.33333%; }\n\n.m2 {\n  float: left;\n  width: 16.66667%; }\n\n.m3 {\n  float: left;\n  width: 25%; }\n\n.m4 {\n  float: left;\n  width: 33.33333%; }\n\n.m5 {\n  float: left;\n  width: 41.66667%; }\n\n.m6 {\n  float: left;\n  width: 50%; }\n\n.m7 {\n  float: left;\n  width: 58.33333%; }\n\n.m8 {\n  float: left;\n  width: 66.66667%; }\n\n.m9 {\n  float: left;\n  width: 75%; }\n\n.m10 {\n  float: left;\n  width: 83.33333%; }\n\n.m11 {\n  float: left;\n  width: 91.66667%; }\n\n.m12 {\n  float: left;\n  width: 100%; }\n\n.pad-0-0 {\n  padding: 0px 0px; }\n\n.pad-0-5 {\n  padding: 0px 5px; }\n\n.pad-0-10 {\n  padding: 0px 10px; }\n\n.pad-0-15 {\n  padding: 0px 15px; }\n\n.pad-0-20 {\n  padding: 0px 20px; }\n\n.pad-0-25 {\n  padding: 0px 25px; }\n\n.pad-0-30 {\n  padding: 0px 30px; }\n\n.pad-0-35 {\n  padding: 0px 35px; }\n\n.pad-0-40 {\n  padding: 0px 40px; }\n\n.pad-0-45 {\n  padding: 0px 45px; }\n\n.pad-0-50 {\n  padding: 0px 50px; }\n\n.pad-5-0 {\n  padding: 5px 0px; }\n\n.pad-5-5 {\n  padding: 5px 5px; }\n\n.pad-5-10 {\n  padding: 5px 10px; }\n\n.pad-5-15 {\n  padding: 5px 15px; }\n\n.pad-5-20 {\n  padding: 5px 20px; }\n\n.pad-5-25 {\n  padding: 5px 25px; }\n\n.pad-5-30 {\n  padding: 5px 30px; }\n\n.pad-5-35 {\n  padding: 5px 35px; }\n\n.pad-5-40 {\n  padding: 5px 40px; }\n\n.pad-5-45 {\n  padding: 5px 45px; }\n\n.pad-5-50 {\n  padding: 5px 50px; }\n\n.pad-10-0 {\n  padding: 10px 0px; }\n\n.pad-10-5 {\n  padding: 10px 5px; }\n\n.pad-10-10 {\n  padding: 10px 10px; }\n\n.pad-10-15 {\n  padding: 10px 15px; }\n\n.pad-10-20 {\n  padding: 10px 20px; }\n\n.pad-10-25 {\n  padding: 10px 25px; }\n\n.pad-10-30 {\n  padding: 10px 30px; }\n\n.pad-10-35 {\n  padding: 10px 35px; }\n\n.pad-10-40 {\n  padding: 10px 40px; }\n\n.pad-10-45 {\n  padding: 10px 45px; }\n\n.pad-10-50 {\n  padding: 10px 50px; }\n\n.pad-15-0 {\n  padding: 15px 0px; }\n\n.pad-15-5 {\n  padding: 15px 5px; }\n\n.pad-15-10 {\n  padding: 15px 10px; }\n\n.pad-15-15 {\n  padding: 15px 15px; }\n\n.pad-15-20 {\n  padding: 15px 20px; }\n\n.pad-15-25 {\n  padding: 15px 25px; }\n\n.pad-15-30 {\n  padding: 15px 30px; }\n\n.pad-15-35 {\n  padding: 15px 35px; }\n\n.pad-15-40 {\n  padding: 15px 40px; }\n\n.pad-15-45 {\n  padding: 15px 45px; }\n\n.pad-15-50 {\n  padding: 15px 50px; }\n\n.pad-20-0 {\n  padding: 20px 0px; }\n\n.pad-20-5 {\n  padding: 20px 5px; }\n\n.pad-20-10 {\n  padding: 20px 10px; }\n\n.pad-20-15 {\n  padding: 20px 15px; }\n\n.pad-20-20 {\n  padding: 20px 20px; }\n\n.pad-20-25 {\n  padding: 20px 25px; }\n\n.pad-20-30 {\n  padding: 20px 30px; }\n\n.pad-20-35 {\n  padding: 20px 35px; }\n\n.pad-20-40 {\n  padding: 20px 40px; }\n\n.pad-20-45 {\n  padding: 20px 45px; }\n\n.pad-20-50 {\n  padding: 20px 50px; }\n\n.pad-25-0 {\n  padding: 25px 0px; }\n\n.pad-25-5 {\n  padding: 25px 5px; }\n\n.pad-25-10 {\n  padding: 25px 10px; }\n\n.pad-25-15 {\n  padding: 25px 15px; }\n\n.pad-25-20 {\n  padding: 25px 20px; }\n\n.pad-25-25 {\n  padding: 25px 25px; }\n\n.pad-25-30 {\n  padding: 25px 30px; }\n\n.pad-25-35 {\n  padding: 25px 35px; }\n\n.pad-25-40 {\n  padding: 25px 40px; }\n\n.pad-25-45 {\n  padding: 25px 45px; }\n\n.pad-25-50 {\n  padding: 25px 50px; }\n\n.pad-30-0 {\n  padding: 30px 0px; }\n\n.pad-30-5 {\n  padding: 30px 5px; }\n\n.pad-30-10 {\n  padding: 30px 10px; }\n\n.pad-30-15 {\n  padding: 30px 15px; }\n\n.pad-30-20 {\n  padding: 30px 20px; }\n\n.pad-30-25 {\n  padding: 30px 25px; }\n\n.pad-30-30 {\n  padding: 30px 30px; }\n\n.pad-30-35 {\n  padding: 30px 35px; }\n\n.pad-30-40 {\n  padding: 30px 40px; }\n\n.pad-30-45 {\n  padding: 30px 45px; }\n\n.pad-30-50 {\n  padding: 30px 50px; }\n\n.pad-35-0 {\n  padding: 35px 0px; }\n\n.pad-35-5 {\n  padding: 35px 5px; }\n\n.pad-35-10 {\n  padding: 35px 10px; }\n\n.pad-35-15 {\n  padding: 35px 15px; }\n\n.pad-35-20 {\n  padding: 35px 20px; }\n\n.pad-35-25 {\n  padding: 35px 25px; }\n\n.pad-35-30 {\n  padding: 35px 30px; }\n\n.pad-35-35 {\n  padding: 35px 35px; }\n\n.pad-35-40 {\n  padding: 35px 40px; }\n\n.pad-35-45 {\n  padding: 35px 45px; }\n\n.pad-35-50 {\n  padding: 35px 50px; }\n\n.pad-40-0 {\n  padding: 40px 0px; }\n\n.pad-40-5 {\n  padding: 40px 5px; }\n\n.pad-40-10 {\n  padding: 40px 10px; }\n\n.pad-40-15 {\n  padding: 40px 15px; }\n\n.pad-40-20 {\n  padding: 40px 20px; }\n\n.pad-40-25 {\n  padding: 40px 25px; }\n\n.pad-40-30 {\n  padding: 40px 30px; }\n\n.pad-40-35 {\n  padding: 40px 35px; }\n\n.pad-40-40 {\n  padding: 40px 40px; }\n\n.pad-40-45 {\n  padding: 40px 45px; }\n\n.pad-40-50 {\n  padding: 40px 50px; }\n\n.pad-45-0 {\n  padding: 45px 0px; }\n\n.pad-45-5 {\n  padding: 45px 5px; }\n\n.pad-45-10 {\n  padding: 45px 10px; }\n\n.pad-45-15 {\n  padding: 45px 15px; }\n\n.pad-45-20 {\n  padding: 45px 20px; }\n\n.pad-45-25 {\n  padding: 45px 25px; }\n\n.pad-45-30 {\n  padding: 45px 30px; }\n\n.pad-45-35 {\n  padding: 45px 35px; }\n\n.pad-45-40 {\n  padding: 45px 40px; }\n\n.pad-45-45 {\n  padding: 45px 45px; }\n\n.pad-45-50 {\n  padding: 45px 50px; }\n\n.pad-50-0 {\n  padding: 50px 0px; }\n\n.pad-50-5 {\n  padding: 50px 5px; }\n\n.pad-50-10 {\n  padding: 50px 10px; }\n\n.pad-50-15 {\n  padding: 50px 15px; }\n\n.pad-50-20 {\n  padding: 50px 20px; }\n\n.pad-50-25 {\n  padding: 50px 25px; }\n\n.pad-50-30 {\n  padding: 50px 30px; }\n\n.pad-50-35 {\n  padding: 50px 35px; }\n\n.pad-50-40 {\n  padding: 50px 40px; }\n\n.pad-50-45 {\n  padding: 50px 45px; }\n\n.pad-50-50 {\n  padding: 50px 50px; }\n\n.mar-0-0 {\n  margin: 0px 0px; }\n\n.mar-0-5 {\n  margin: 0px 5px; }\n\n.mar-0-10 {\n  margin: 0px 10px; }\n\n.mar-0-15 {\n  margin: 0px 15px; }\n\n.mar-0-20 {\n  margin: 0px 20px; }\n\n.mar-0-25 {\n  margin: 0px 25px; }\n\n.mar-0-30 {\n  margin: 0px 30px; }\n\n.mar-0-35 {\n  margin: 0px 35px; }\n\n.mar-0-40 {\n  margin: 0px 40px; }\n\n.mar-0-45 {\n  margin: 0px 45px; }\n\n.mar-0-50 {\n  margin: 0px 50px; }\n\n.mar-5-0 {\n  margin: 5px 0px; }\n\n.mar-5-5 {\n  margin: 5px 5px; }\n\n.mar-5-10 {\n  margin: 5px 10px; }\n\n.mar-5-15 {\n  margin: 5px 15px; }\n\n.mar-5-20 {\n  margin: 5px 20px; }\n\n.mar-5-25 {\n  margin: 5px 25px; }\n\n.mar-5-30 {\n  margin: 5px 30px; }\n\n.mar-5-35 {\n  margin: 5px 35px; }\n\n.mar-5-40 {\n  margin: 5px 40px; }\n\n.mar-5-45 {\n  margin: 5px 45px; }\n\n.mar-5-50 {\n  margin: 5px 50px; }\n\n.mar-10-0 {\n  margin: 10px 0px; }\n\n.mar-10-5 {\n  margin: 10px 5px; }\n\n.mar-10-10 {\n  margin: 10px 10px; }\n\n.mar-10-15 {\n  margin: 10px 15px; }\n\n.mar-10-20 {\n  margin: 10px 20px; }\n\n.mar-10-25 {\n  margin: 10px 25px; }\n\n.mar-10-30 {\n  margin: 10px 30px; }\n\n.mar-10-35 {\n  margin: 10px 35px; }\n\n.mar-10-40 {\n  margin: 10px 40px; }\n\n.mar-10-45 {\n  margin: 10px 45px; }\n\n.mar-10-50 {\n  margin: 10px 50px; }\n\n.mar-15-0 {\n  margin: 15px 0px; }\n\n.mar-15-5 {\n  margin: 15px 5px; }\n\n.mar-15-10 {\n  margin: 15px 10px; }\n\n.mar-15-15 {\n  margin: 15px 15px; }\n\n.mar-15-20 {\n  margin: 15px 20px; }\n\n.mar-15-25 {\n  margin: 15px 25px; }\n\n.mar-15-30 {\n  margin: 15px 30px; }\n\n.mar-15-35 {\n  margin: 15px 35px; }\n\n.mar-15-40 {\n  margin: 15px 40px; }\n\n.mar-15-45 {\n  margin: 15px 45px; }\n\n.mar-15-50 {\n  margin: 15px 50px; }\n\n.mar-20-0 {\n  margin: 20px 0px; }\n\n.mar-20-5 {\n  margin: 20px 5px; }\n\n.mar-20-10 {\n  margin: 20px 10px; }\n\n.mar-20-15 {\n  margin: 20px 15px; }\n\n.mar-20-20 {\n  margin: 20px 20px; }\n\n.mar-20-25 {\n  margin: 20px 25px; }\n\n.mar-20-30 {\n  margin: 20px 30px; }\n\n.mar-20-35 {\n  margin: 20px 35px; }\n\n.mar-20-40 {\n  margin: 20px 40px; }\n\n.mar-20-45 {\n  margin: 20px 45px; }\n\n.mar-20-50 {\n  margin: 20px 50px; }\n\n.mar-25-0 {\n  margin: 25px 0px; }\n\n.mar-25-5 {\n  margin: 25px 5px; }\n\n.mar-25-10 {\n  margin: 25px 10px; }\n\n.mar-25-15 {\n  margin: 25px 15px; }\n\n.mar-25-20 {\n  margin: 25px 20px; }\n\n.mar-25-25 {\n  margin: 25px 25px; }\n\n.mar-25-30 {\n  margin: 25px 30px; }\n\n.mar-25-35 {\n  margin: 25px 35px; }\n\n.mar-25-40 {\n  margin: 25px 40px; }\n\n.mar-25-45 {\n  margin: 25px 45px; }\n\n.mar-25-50 {\n  margin: 25px 50px; }\n\n.mar-30-0 {\n  margin: 30px 0px; }\n\n.mar-30-5 {\n  margin: 30px 5px; }\n\n.mar-30-10 {\n  margin: 30px 10px; }\n\n.mar-30-15 {\n  margin: 30px 15px; }\n\n.mar-30-20 {\n  margin: 30px 20px; }\n\n.mar-30-25 {\n  margin: 30px 25px; }\n\n.mar-30-30 {\n  margin: 30px 30px; }\n\n.mar-30-35 {\n  margin: 30px 35px; }\n\n.mar-30-40 {\n  margin: 30px 40px; }\n\n.mar-30-45 {\n  margin: 30px 45px; }\n\n.mar-30-50 {\n  margin: 30px 50px; }\n\n.mar-35-0 {\n  margin: 35px 0px; }\n\n.mar-35-5 {\n  margin: 35px 5px; }\n\n.mar-35-10 {\n  margin: 35px 10px; }\n\n.mar-35-15 {\n  margin: 35px 15px; }\n\n.mar-35-20 {\n  margin: 35px 20px; }\n\n.mar-35-25 {\n  margin: 35px 25px; }\n\n.mar-35-30 {\n  margin: 35px 30px; }\n\n.mar-35-35 {\n  margin: 35px 35px; }\n\n.mar-35-40 {\n  margin: 35px 40px; }\n\n.mar-35-45 {\n  margin: 35px 45px; }\n\n.mar-35-50 {\n  margin: 35px 50px; }\n\n.mar-40-0 {\n  margin: 40px 0px; }\n\n.mar-40-5 {\n  margin: 40px 5px; }\n\n.mar-40-10 {\n  margin: 40px 10px; }\n\n.mar-40-15 {\n  margin: 40px 15px; }\n\n.mar-40-20 {\n  margin: 40px 20px; }\n\n.mar-40-25 {\n  margin: 40px 25px; }\n\n.mar-40-30 {\n  margin: 40px 30px; }\n\n.mar-40-35 {\n  margin: 40px 35px; }\n\n.mar-40-40 {\n  margin: 40px 40px; }\n\n.mar-40-45 {\n  margin: 40px 45px; }\n\n.mar-40-50 {\n  margin: 40px 50px; }\n\n.mar-45-0 {\n  margin: 45px 0px; }\n\n.mar-45-5 {\n  margin: 45px 5px; }\n\n.mar-45-10 {\n  margin: 45px 10px; }\n\n.mar-45-15 {\n  margin: 45px 15px; }\n\n.mar-45-20 {\n  margin: 45px 20px; }\n\n.mar-45-25 {\n  margin: 45px 25px; }\n\n.mar-45-30 {\n  margin: 45px 30px; }\n\n.mar-45-35 {\n  margin: 45px 35px; }\n\n.mar-45-40 {\n  margin: 45px 40px; }\n\n.mar-45-45 {\n  margin: 45px 45px; }\n\n.mar-45-50 {\n  margin: 45px 50px; }\n\n.mar-50-0 {\n  margin: 50px 0px; }\n\n.mar-50-5 {\n  margin: 50px 5px; }\n\n.mar-50-10 {\n  margin: 50px 10px; }\n\n.mar-50-15 {\n  margin: 50px 15px; }\n\n.mar-50-20 {\n  margin: 50px 20px; }\n\n.mar-50-25 {\n  margin: 50px 25px; }\n\n.mar-50-30 {\n  margin: 50px 30px; }\n\n.mar-50-35 {\n  margin: 50px 35px; }\n\n.mar-50-40 {\n  margin: 50px 40px; }\n\n.mar-50-45 {\n  margin: 50px 45px; }\n\n.mar-50-50 {\n  margin: 50px 50px; }\n\n@media only screen and (max-width: 600px) {\n  .s1 {\n    float: left;\n    width: 8.33333%; }\n  .s2 {\n    float: left;\n    width: 16.66667%; }\n  .s3 {\n    float: left;\n    width: 25%; }\n  .s4 {\n    float: left;\n    width: 33.33333%; }\n  .s5 {\n    float: left;\n    width: 41.66667%; }\n  .s6 {\n    float: left;\n    width: 50%; }\n  .s7 {\n    float: left;\n    width: 58.33333%; }\n  .s8 {\n    float: left;\n    width: 66.66667%; }\n  .s9 {\n    float: left;\n    width: 75%; }\n  .s10 {\n    float: left;\n    width: 83.33333%; }\n  .s11 {\n    float: left;\n    width: 91.66667%; }\n  .s12 {\n    float: left;\n    width: 100%; } }\n\n.-i-s-fixed {\n  transform: none !important;\n  flex-shrink: 0; }\n\n.-i-s-scroll {\n  overflow-x: scroll;\n  overflow-y: hidden; }\n\n.-i-s-scroll.-i-s-vertical {\n  overflow-y: scroll;\n  overflow-x: hidden; }\n\n.-i-s-center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-s-static {\n  box-sizing: border-box;\n  position: relative;\n  flex-direction: row;\n  display: flex;\n  overflow: hidden; }\n  .-i-s-static.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-outer {\n  position: relative;\n  overflow: hidden; }\n  .-i-s-outer ::-webkit-scrollbar {\n    display: none; }\n\n.-i-s-inner {\n  min-height: 100%;\n  display: flex; }\n  .-i-s-inner > .-i-s-in {\n    transition: transform 0.3s cubic-bezier(0, 0.93, 0.27, 1);\n    transform: scale(1) rotateY(0deg) !important; }\n  .-i-s-inner > .-i-s-in_pre.-i-s-right {\n    transform-origin: 0% 50%;\n    transform: scale(1) rotateY(10deg); }\n  .-i-s-inner > .-i-s-in_pre.-i-s-left {\n    transform-origin: 100% 50%;\n    transform: scale(1) rotateY(-10deg); }\n  .-i-s-inner.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-inner > .-i-s-outer {\n  flex-shrink: 0; }\n\n.-i-s-inner > .-i-s-static {\n  flex-shrink: 0; }\n\n.-i-s-horizontal {\n  flex-direction: row; }\n\n.-i-s-vertical {\n  flex-direction: column; }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-right {\n    transform-origin: 50% 0%;\n    transform: scale(1) rotateX(-60deg); }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-left {\n    transform-origin: 50% 100%;\n    transform: scale(1) rotateX(60deg); }\n  .-i-s-vertical.-i-s-reverse {\n    flex-direction: column-reverse; }\n\n.-i-viewer {\n  background: black;\n  position: absolute;\n  width: 100vw;\n  height: calc(100vh - 50px);\n  top: 50px;\n  left: 0;\n  overflow: hidden;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-viewer-image {\n  border-radius: 10px;\n  position: absolute;\n  left: 0;\n  top: 0;\n  transition: opacity 0.3s ease;\n  opacity: 1; }\n  .-i-viewer-image:hidden {\n    opacity: 0; }\n\n.-i-loader {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin: auto;\n  width: 10px;\n  height: 10px;\n  background-color: #FFFFFF;\n  animation: rotate 1s infinite ease-in-out;\n  transition: opacity 1s ease; }\n\n.-i-loader-stop {\n  animation-iteration-count: 0;\n  opacity: 0.2;\n  transform: scale(0.5); }\n\n@keyframes rotate {\n  0% {\n    transform: perspective(20px) rotateX(0deg) rotateY(0deg); }\n  50% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(0deg); }\n  100% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(-180deg); } }\n\n.-i-grid {\n  -webkit-overflow-scrolling: touch;\n  transform: translateZ(0);\n  position: relative;\n  width: 100%;\n  overflow: scroll;\n  height: 100%; }\n  .-i-grid .-i-grid-item-outer {\n    transform-origin: center center 0px;\n    -webkit-transform-origin: center center 0px;\n    position: absolute;\n    box-sizing: border-box;\n    backface-visibility: hidden; }\n    .-i-grid .-i-grid-item-outer::before {\n      will-change: transform; }\n  .-i-grid .-i-grid-item-inner {\n    backface-visibility: hidden;\n    transform-style: preserve-3d;\n    width: 100%;\n    height: 100%;\n    position: relative; }\n  .-i-grid .-i-grid-inner {\n    -webkit-overflow-scrolling: touch;\n    width: 100%;\n    height: auto;\n    position: relative; }\n  .-i-grid .-i-loader {\n    position: absolute;\n    left: calc( 50% - 5px);\n    bottom: 25px; }\n\n.-i-grid-fixed {\n  height: auto;\n  overflow: visible; }\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 37 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(3)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n@-webkit-keyframes autofill {\n  to {\n    color: #666;\n    background: transparent; } }\n\n.-i-input {\n  font-family: 'Lato', sans-serif;\n  height: 50px;\n  padding-left: 15px;\n  min-width: 50px;\n  position: relative;\n  overflow: hidden;\n  transition: background 0.1s ease;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n  .-i-input i {\n    color: rgba(255, 255, 255, 0.13);\n    transition: color 0.1s ease; }\n  .-i-input input {\n    font-family: inherit;\n    border: none;\n    background: none;\n    font-size: 14px;\n    line-height: 14px;\n    color: white;\n    font-weight: 100;\n    outline: none;\n    height: 100%;\n    width: calc(100% - 4px);\n    border-bottom: none;\n    padding: 0px 8px;\n    padding-left: 10px; }\n    .-i-input input:-webkit-autofill {\n      -webkit-text-fill-color: cyan;\n      -webkit-animation-name: autofill;\n      -webkit-animation-fill-mode: both; }\n  .-i-input.file > i {\n    margin: 0 auto; }\n  .-i-input input[type=\"file\"] {\n    display: block;\n    width: 66px;\n    height: 25px;\n    clip: rect(0px 0px 0px 0px);\n    position: absolute;\n    left: 0;\n    top: 0; }\n  .-i-input input::-webkit-input-placeholder {\n    font-weight: 200;\n    font-size: 14px;\n    color: rgba(255, 255, 255, 0.15); }\n  .-i-input.disabled input::-webkit-input-placeholder {\n    opacity: 0.2; }\n  .-i-input .label {\n    display: inline-table;\n    padding: 0px 5px;\n    margin-top: 0px;\n    padding-top: 2px;\n    padding-left: 10px;\n    min-width: 90px;\n    border-left: 2px solid rgba(255, 255, 255, 0.13);\n    border-right: 2px solid rgba(255, 255, 255, 0);\n    font-size: 14px;\n    line-height: 14px;\n    font-weight: 400;\n    color: rgba(255, 255, 255, 0.64); }\n  .-i-input.-i-icon-label .label {\n    padding: 0px;\n    min-width: 0px;\n    border: none !important; }\n  .-i-input.file {\n    cursor: pointer; }\n    .-i-input.file input {\n      cursor: pointer !important; }\n    .-i-input.file .label {\n      color: rgba(255, 255, 255, 0.4); }\n  .-i-input.file:hover i {\n    color: white; }\n  .-i-input.has-data input {\n    font-size: 14px; }\n  .-i-input.file:hover {\n    background: rgba(0, 0, 0, 0.1); }\n  .-i-input.focus {\n    background: rgba(0, 0, 0, 0.1); }\n    .-i-input.focus .label {\n      border-left: 2px solid rgba(255, 255, 255, 0);\n      border-right: 2px solid rgba(255, 255, 255, 0.13); }\n  .-i-input.has-data .label {\n    border-left: 2px solid rgba(255, 255, 255, 0);\n    border-right: 2px solid rgba(255, 255, 255, 0.13); }\n  .-i-input.textarea {\n    display: block;\n    height: auto; }\n    .-i-input.textarea .label {\n      border-left: 2px solid rgba(255, 255, 255, 0);\n      border-right: 2px solid rgba(255, 255, 255, 0);\n      margin-top: 8px; }\n    .-i-input.textarea textarea {\n      color: white;\n      font-family: 'Lato', sans-serif;\n      font-weight: 400;\n      font-size: 14px;\n      padding: 10px;\n      width: 100%;\n      outline: none;\n      border: none;\n      background: none;\n      max-width: 100%; }\n    .-i-input.textarea .textarea-bar {\n      position: absolute;\n      height: calc(100% - 14px);\n      width: 2px;\n      left: 0px;\n      top: 8px;\n      background: rgba(255, 255, 255, 0.1); }\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(3)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-modal-wrap {\n  height: 100%; }\n  .-i-modal-wrap .-i-modal-canvas {\n    height: 100%;\n    position: absolute;\n    left: 0px;\n    width: 100%;\n    top: 0px; }\n  .-i-modal-wrap .-i-modal-content {\n    z-index: 1;\n    position: relative; }\n  .-i-modal-wrap .-i-modal-close {\n    position: absolute;\n    right: 0px;\n    top: 0px;\n    width: 50px;\n    height: 50px;\n    cursor: pointer;\n    align-items: center;\n    display: flex;\n    align-content: center;\n    justify-content: center;\n    color: white;\n    opacity: 0.7;\n    transition: opacity 0.3s ease;\n    z-index: 10; }\n    .-i-modal-wrap .-i-modal-close:hover {\n      opacity: 1; }\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 39 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(3)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-overlay {\n  z-index: 90;\n  transition: opacity 0.2s ease;\n  opacity: 1;\n  background: rgba(0, 0, 0, 0.8);\n  position: absolute;\n  height: 100%;\n  width: 100%;\n  left: 0px;\n  top: 0px;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-overlay-hidden {\n  pointer-events: none;\n  opacity: 0; }\n\n.-i-angle {\n  position: absolute;\n  height: 50px;\n  width: 50px; }\n\n.-i-angle-bottom {\n  left: calc(50% - 25px);\n  bottom: 0; }\n\n.-i-angle-top {\n  left: calc(50% - 25px);\n  top: 0; }\n\n.-i-angle-right {\n  right: 0%;\n  top: calc(50% - 25px); }\n\n.-i-angle-left {\n  left: 0%;\n  top: calc(50% - 25px); }\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 40 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(3)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.flex {\n  display: flex; }\n  .flex.down {\n    flex-direction: column; }\n  .flex.right {\n    flex-direction: row; }\n\n.s1 {\n  float: left;\n  width: 8.33333%; }\n\n.s2 {\n  float: left;\n  width: 16.66667%; }\n\n.s3 {\n  float: left;\n  width: 25%; }\n\n.s4 {\n  float: left;\n  width: 33.33333%; }\n\n.s5 {\n  float: left;\n  width: 41.66667%; }\n\n.s6 {\n  float: left;\n  width: 50%; }\n\n.s7 {\n  float: left;\n  width: 58.33333%; }\n\n.s8 {\n  float: left;\n  width: 66.66667%; }\n\n.s9 {\n  float: left;\n  width: 75%; }\n\n.s10 {\n  float: left;\n  width: 83.33333%; }\n\n.s11 {\n  float: left;\n  width: 91.66667%; }\n\n.s12 {\n  float: left;\n  width: 100%; }\n\n.m1 {\n  float: left;\n  width: 8.33333%; }\n\n.m2 {\n  float: left;\n  width: 16.66667%; }\n\n.m3 {\n  float: left;\n  width: 25%; }\n\n.m4 {\n  float: left;\n  width: 33.33333%; }\n\n.m5 {\n  float: left;\n  width: 41.66667%; }\n\n.m6 {\n  float: left;\n  width: 50%; }\n\n.m7 {\n  float: left;\n  width: 58.33333%; }\n\n.m8 {\n  float: left;\n  width: 66.66667%; }\n\n.m9 {\n  float: left;\n  width: 75%; }\n\n.m10 {\n  float: left;\n  width: 83.33333%; }\n\n.m11 {\n  float: left;\n  width: 91.66667%; }\n\n.m12 {\n  float: left;\n  width: 100%; }\n\n.pad-0-0 {\n  padding: 0px 0px; }\n\n.pad-0-5 {\n  padding: 0px 5px; }\n\n.pad-0-10 {\n  padding: 0px 10px; }\n\n.pad-0-15 {\n  padding: 0px 15px; }\n\n.pad-0-20 {\n  padding: 0px 20px; }\n\n.pad-0-25 {\n  padding: 0px 25px; }\n\n.pad-0-30 {\n  padding: 0px 30px; }\n\n.pad-0-35 {\n  padding: 0px 35px; }\n\n.pad-0-40 {\n  padding: 0px 40px; }\n\n.pad-0-45 {\n  padding: 0px 45px; }\n\n.pad-0-50 {\n  padding: 0px 50px; }\n\n.pad-5-0 {\n  padding: 5px 0px; }\n\n.pad-5-5 {\n  padding: 5px 5px; }\n\n.pad-5-10 {\n  padding: 5px 10px; }\n\n.pad-5-15 {\n  padding: 5px 15px; }\n\n.pad-5-20 {\n  padding: 5px 20px; }\n\n.pad-5-25 {\n  padding: 5px 25px; }\n\n.pad-5-30 {\n  padding: 5px 30px; }\n\n.pad-5-35 {\n  padding: 5px 35px; }\n\n.pad-5-40 {\n  padding: 5px 40px; }\n\n.pad-5-45 {\n  padding: 5px 45px; }\n\n.pad-5-50 {\n  padding: 5px 50px; }\n\n.pad-10-0 {\n  padding: 10px 0px; }\n\n.pad-10-5 {\n  padding: 10px 5px; }\n\n.pad-10-10 {\n  padding: 10px 10px; }\n\n.pad-10-15 {\n  padding: 10px 15px; }\n\n.pad-10-20 {\n  padding: 10px 20px; }\n\n.pad-10-25 {\n  padding: 10px 25px; }\n\n.pad-10-30 {\n  padding: 10px 30px; }\n\n.pad-10-35 {\n  padding: 10px 35px; }\n\n.pad-10-40 {\n  padding: 10px 40px; }\n\n.pad-10-45 {\n  padding: 10px 45px; }\n\n.pad-10-50 {\n  padding: 10px 50px; }\n\n.pad-15-0 {\n  padding: 15px 0px; }\n\n.pad-15-5 {\n  padding: 15px 5px; }\n\n.pad-15-10 {\n  padding: 15px 10px; }\n\n.pad-15-15 {\n  padding: 15px 15px; }\n\n.pad-15-20 {\n  padding: 15px 20px; }\n\n.pad-15-25 {\n  padding: 15px 25px; }\n\n.pad-15-30 {\n  padding: 15px 30px; }\n\n.pad-15-35 {\n  padding: 15px 35px; }\n\n.pad-15-40 {\n  padding: 15px 40px; }\n\n.pad-15-45 {\n  padding: 15px 45px; }\n\n.pad-15-50 {\n  padding: 15px 50px; }\n\n.pad-20-0 {\n  padding: 20px 0px; }\n\n.pad-20-5 {\n  padding: 20px 5px; }\n\n.pad-20-10 {\n  padding: 20px 10px; }\n\n.pad-20-15 {\n  padding: 20px 15px; }\n\n.pad-20-20 {\n  padding: 20px 20px; }\n\n.pad-20-25 {\n  padding: 20px 25px; }\n\n.pad-20-30 {\n  padding: 20px 30px; }\n\n.pad-20-35 {\n  padding: 20px 35px; }\n\n.pad-20-40 {\n  padding: 20px 40px; }\n\n.pad-20-45 {\n  padding: 20px 45px; }\n\n.pad-20-50 {\n  padding: 20px 50px; }\n\n.pad-25-0 {\n  padding: 25px 0px; }\n\n.pad-25-5 {\n  padding: 25px 5px; }\n\n.pad-25-10 {\n  padding: 25px 10px; }\n\n.pad-25-15 {\n  padding: 25px 15px; }\n\n.pad-25-20 {\n  padding: 25px 20px; }\n\n.pad-25-25 {\n  padding: 25px 25px; }\n\n.pad-25-30 {\n  padding: 25px 30px; }\n\n.pad-25-35 {\n  padding: 25px 35px; }\n\n.pad-25-40 {\n  padding: 25px 40px; }\n\n.pad-25-45 {\n  padding: 25px 45px; }\n\n.pad-25-50 {\n  padding: 25px 50px; }\n\n.pad-30-0 {\n  padding: 30px 0px; }\n\n.pad-30-5 {\n  padding: 30px 5px; }\n\n.pad-30-10 {\n  padding: 30px 10px; }\n\n.pad-30-15 {\n  padding: 30px 15px; }\n\n.pad-30-20 {\n  padding: 30px 20px; }\n\n.pad-30-25 {\n  padding: 30px 25px; }\n\n.pad-30-30 {\n  padding: 30px 30px; }\n\n.pad-30-35 {\n  padding: 30px 35px; }\n\n.pad-30-40 {\n  padding: 30px 40px; }\n\n.pad-30-45 {\n  padding: 30px 45px; }\n\n.pad-30-50 {\n  padding: 30px 50px; }\n\n.pad-35-0 {\n  padding: 35px 0px; }\n\n.pad-35-5 {\n  padding: 35px 5px; }\n\n.pad-35-10 {\n  padding: 35px 10px; }\n\n.pad-35-15 {\n  padding: 35px 15px; }\n\n.pad-35-20 {\n  padding: 35px 20px; }\n\n.pad-35-25 {\n  padding: 35px 25px; }\n\n.pad-35-30 {\n  padding: 35px 30px; }\n\n.pad-35-35 {\n  padding: 35px 35px; }\n\n.pad-35-40 {\n  padding: 35px 40px; }\n\n.pad-35-45 {\n  padding: 35px 45px; }\n\n.pad-35-50 {\n  padding: 35px 50px; }\n\n.pad-40-0 {\n  padding: 40px 0px; }\n\n.pad-40-5 {\n  padding: 40px 5px; }\n\n.pad-40-10 {\n  padding: 40px 10px; }\n\n.pad-40-15 {\n  padding: 40px 15px; }\n\n.pad-40-20 {\n  padding: 40px 20px; }\n\n.pad-40-25 {\n  padding: 40px 25px; }\n\n.pad-40-30 {\n  padding: 40px 30px; }\n\n.pad-40-35 {\n  padding: 40px 35px; }\n\n.pad-40-40 {\n  padding: 40px 40px; }\n\n.pad-40-45 {\n  padding: 40px 45px; }\n\n.pad-40-50 {\n  padding: 40px 50px; }\n\n.pad-45-0 {\n  padding: 45px 0px; }\n\n.pad-45-5 {\n  padding: 45px 5px; }\n\n.pad-45-10 {\n  padding: 45px 10px; }\n\n.pad-45-15 {\n  padding: 45px 15px; }\n\n.pad-45-20 {\n  padding: 45px 20px; }\n\n.pad-45-25 {\n  padding: 45px 25px; }\n\n.pad-45-30 {\n  padding: 45px 30px; }\n\n.pad-45-35 {\n  padding: 45px 35px; }\n\n.pad-45-40 {\n  padding: 45px 40px; }\n\n.pad-45-45 {\n  padding: 45px 45px; }\n\n.pad-45-50 {\n  padding: 45px 50px; }\n\n.pad-50-0 {\n  padding: 50px 0px; }\n\n.pad-50-5 {\n  padding: 50px 5px; }\n\n.pad-50-10 {\n  padding: 50px 10px; }\n\n.pad-50-15 {\n  padding: 50px 15px; }\n\n.pad-50-20 {\n  padding: 50px 20px; }\n\n.pad-50-25 {\n  padding: 50px 25px; }\n\n.pad-50-30 {\n  padding: 50px 30px; }\n\n.pad-50-35 {\n  padding: 50px 35px; }\n\n.pad-50-40 {\n  padding: 50px 40px; }\n\n.pad-50-45 {\n  padding: 50px 45px; }\n\n.pad-50-50 {\n  padding: 50px 50px; }\n\n.mar-0-0 {\n  margin: 0px 0px; }\n\n.mar-0-5 {\n  margin: 0px 5px; }\n\n.mar-0-10 {\n  margin: 0px 10px; }\n\n.mar-0-15 {\n  margin: 0px 15px; }\n\n.mar-0-20 {\n  margin: 0px 20px; }\n\n.mar-0-25 {\n  margin: 0px 25px; }\n\n.mar-0-30 {\n  margin: 0px 30px; }\n\n.mar-0-35 {\n  margin: 0px 35px; }\n\n.mar-0-40 {\n  margin: 0px 40px; }\n\n.mar-0-45 {\n  margin: 0px 45px; }\n\n.mar-0-50 {\n  margin: 0px 50px; }\n\n.mar-5-0 {\n  margin: 5px 0px; }\n\n.mar-5-5 {\n  margin: 5px 5px; }\n\n.mar-5-10 {\n  margin: 5px 10px; }\n\n.mar-5-15 {\n  margin: 5px 15px; }\n\n.mar-5-20 {\n  margin: 5px 20px; }\n\n.mar-5-25 {\n  margin: 5px 25px; }\n\n.mar-5-30 {\n  margin: 5px 30px; }\n\n.mar-5-35 {\n  margin: 5px 35px; }\n\n.mar-5-40 {\n  margin: 5px 40px; }\n\n.mar-5-45 {\n  margin: 5px 45px; }\n\n.mar-5-50 {\n  margin: 5px 50px; }\n\n.mar-10-0 {\n  margin: 10px 0px; }\n\n.mar-10-5 {\n  margin: 10px 5px; }\n\n.mar-10-10 {\n  margin: 10px 10px; }\n\n.mar-10-15 {\n  margin: 10px 15px; }\n\n.mar-10-20 {\n  margin: 10px 20px; }\n\n.mar-10-25 {\n  margin: 10px 25px; }\n\n.mar-10-30 {\n  margin: 10px 30px; }\n\n.mar-10-35 {\n  margin: 10px 35px; }\n\n.mar-10-40 {\n  margin: 10px 40px; }\n\n.mar-10-45 {\n  margin: 10px 45px; }\n\n.mar-10-50 {\n  margin: 10px 50px; }\n\n.mar-15-0 {\n  margin: 15px 0px; }\n\n.mar-15-5 {\n  margin: 15px 5px; }\n\n.mar-15-10 {\n  margin: 15px 10px; }\n\n.mar-15-15 {\n  margin: 15px 15px; }\n\n.mar-15-20 {\n  margin: 15px 20px; }\n\n.mar-15-25 {\n  margin: 15px 25px; }\n\n.mar-15-30 {\n  margin: 15px 30px; }\n\n.mar-15-35 {\n  margin: 15px 35px; }\n\n.mar-15-40 {\n  margin: 15px 40px; }\n\n.mar-15-45 {\n  margin: 15px 45px; }\n\n.mar-15-50 {\n  margin: 15px 50px; }\n\n.mar-20-0 {\n  margin: 20px 0px; }\n\n.mar-20-5 {\n  margin: 20px 5px; }\n\n.mar-20-10 {\n  margin: 20px 10px; }\n\n.mar-20-15 {\n  margin: 20px 15px; }\n\n.mar-20-20 {\n  margin: 20px 20px; }\n\n.mar-20-25 {\n  margin: 20px 25px; }\n\n.mar-20-30 {\n  margin: 20px 30px; }\n\n.mar-20-35 {\n  margin: 20px 35px; }\n\n.mar-20-40 {\n  margin: 20px 40px; }\n\n.mar-20-45 {\n  margin: 20px 45px; }\n\n.mar-20-50 {\n  margin: 20px 50px; }\n\n.mar-25-0 {\n  margin: 25px 0px; }\n\n.mar-25-5 {\n  margin: 25px 5px; }\n\n.mar-25-10 {\n  margin: 25px 10px; }\n\n.mar-25-15 {\n  margin: 25px 15px; }\n\n.mar-25-20 {\n  margin: 25px 20px; }\n\n.mar-25-25 {\n  margin: 25px 25px; }\n\n.mar-25-30 {\n  margin: 25px 30px; }\n\n.mar-25-35 {\n  margin: 25px 35px; }\n\n.mar-25-40 {\n  margin: 25px 40px; }\n\n.mar-25-45 {\n  margin: 25px 45px; }\n\n.mar-25-50 {\n  margin: 25px 50px; }\n\n.mar-30-0 {\n  margin: 30px 0px; }\n\n.mar-30-5 {\n  margin: 30px 5px; }\n\n.mar-30-10 {\n  margin: 30px 10px; }\n\n.mar-30-15 {\n  margin: 30px 15px; }\n\n.mar-30-20 {\n  margin: 30px 20px; }\n\n.mar-30-25 {\n  margin: 30px 25px; }\n\n.mar-30-30 {\n  margin: 30px 30px; }\n\n.mar-30-35 {\n  margin: 30px 35px; }\n\n.mar-30-40 {\n  margin: 30px 40px; }\n\n.mar-30-45 {\n  margin: 30px 45px; }\n\n.mar-30-50 {\n  margin: 30px 50px; }\n\n.mar-35-0 {\n  margin: 35px 0px; }\n\n.mar-35-5 {\n  margin: 35px 5px; }\n\n.mar-35-10 {\n  margin: 35px 10px; }\n\n.mar-35-15 {\n  margin: 35px 15px; }\n\n.mar-35-20 {\n  margin: 35px 20px; }\n\n.mar-35-25 {\n  margin: 35px 25px; }\n\n.mar-35-30 {\n  margin: 35px 30px; }\n\n.mar-35-35 {\n  margin: 35px 35px; }\n\n.mar-35-40 {\n  margin: 35px 40px; }\n\n.mar-35-45 {\n  margin: 35px 45px; }\n\n.mar-35-50 {\n  margin: 35px 50px; }\n\n.mar-40-0 {\n  margin: 40px 0px; }\n\n.mar-40-5 {\n  margin: 40px 5px; }\n\n.mar-40-10 {\n  margin: 40px 10px; }\n\n.mar-40-15 {\n  margin: 40px 15px; }\n\n.mar-40-20 {\n  margin: 40px 20px; }\n\n.mar-40-25 {\n  margin: 40px 25px; }\n\n.mar-40-30 {\n  margin: 40px 30px; }\n\n.mar-40-35 {\n  margin: 40px 35px; }\n\n.mar-40-40 {\n  margin: 40px 40px; }\n\n.mar-40-45 {\n  margin: 40px 45px; }\n\n.mar-40-50 {\n  margin: 40px 50px; }\n\n.mar-45-0 {\n  margin: 45px 0px; }\n\n.mar-45-5 {\n  margin: 45px 5px; }\n\n.mar-45-10 {\n  margin: 45px 10px; }\n\n.mar-45-15 {\n  margin: 45px 15px; }\n\n.mar-45-20 {\n  margin: 45px 20px; }\n\n.mar-45-25 {\n  margin: 45px 25px; }\n\n.mar-45-30 {\n  margin: 45px 30px; }\n\n.mar-45-35 {\n  margin: 45px 35px; }\n\n.mar-45-40 {\n  margin: 45px 40px; }\n\n.mar-45-45 {\n  margin: 45px 45px; }\n\n.mar-45-50 {\n  margin: 45px 50px; }\n\n.mar-50-0 {\n  margin: 50px 0px; }\n\n.mar-50-5 {\n  margin: 50px 5px; }\n\n.mar-50-10 {\n  margin: 50px 10px; }\n\n.mar-50-15 {\n  margin: 50px 15px; }\n\n.mar-50-20 {\n  margin: 50px 20px; }\n\n.mar-50-25 {\n  margin: 50px 25px; }\n\n.mar-50-30 {\n  margin: 50px 30px; }\n\n.mar-50-35 {\n  margin: 50px 35px; }\n\n.mar-50-40 {\n  margin: 50px 40px; }\n\n.mar-50-45 {\n  margin: 50px 45px; }\n\n.mar-50-50 {\n  margin: 50px 50px; }\n\n@media only screen and (max-width: 600px) {\n  .s1 {\n    float: left;\n    width: 8.33333%; }\n  .s2 {\n    float: left;\n    width: 16.66667%; }\n  .s3 {\n    float: left;\n    width: 25%; }\n  .s4 {\n    float: left;\n    width: 33.33333%; }\n  .s5 {\n    float: left;\n    width: 41.66667%; }\n  .s6 {\n    float: left;\n    width: 50%; }\n  .s7 {\n    float: left;\n    width: 58.33333%; }\n  .s8 {\n    float: left;\n    width: 66.66667%; }\n  .s9 {\n    float: left;\n    width: 75%; }\n  .s10 {\n    float: left;\n    width: 83.33333%; }\n  .s11 {\n    float: left;\n    width: 91.66667%; }\n  .s12 {\n    float: left;\n    width: 100%; } }\n\n.-i-s-fixed {\n  transform: none !important;\n  flex-shrink: 0; }\n\n.-i-s-scroll {\n  overflow-x: scroll;\n  overflow-y: hidden; }\n\n.-i-s-scroll.-i-s-vertical {\n  overflow-y: scroll;\n  overflow-x: hidden; }\n\n.-i-s-center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-s-static {\n  box-sizing: border-box;\n  position: relative;\n  flex-direction: row;\n  display: flex;\n  overflow: hidden; }\n  .-i-s-static.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-outer {\n  position: relative;\n  overflow: hidden; }\n  .-i-s-outer ::-webkit-scrollbar {\n    display: none; }\n\n.-i-s-inner {\n  min-height: 100%;\n  display: flex; }\n  .-i-s-inner > .-i-s-in {\n    transition: transform 0.3s cubic-bezier(0, 0.93, 0.27, 1);\n    transform: scale(1) rotateY(0deg) !important; }\n  .-i-s-inner > .-i-s-in_pre.-i-s-right {\n    transform-origin: 0% 50%;\n    transform: scale(1) rotateY(10deg); }\n  .-i-s-inner > .-i-s-in_pre.-i-s-left {\n    transform-origin: 100% 50%;\n    transform: scale(1) rotateY(-10deg); }\n  .-i-s-inner.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-inner > .-i-s-outer {\n  flex-shrink: 0; }\n\n.-i-s-inner > .-i-s-static {\n  flex-shrink: 0; }\n\n.-i-s-horizontal {\n  flex-direction: row; }\n\n.-i-s-vertical {\n  flex-direction: column; }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-right {\n    transform-origin: 50% 0%;\n    transform: scale(1) rotateX(-60deg); }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-left {\n    transform-origin: 50% 100%;\n    transform: scale(1) rotateX(60deg); }\n  .-i-s-vertical.-i-s-reverse {\n    flex-direction: column-reverse; }\n\n.-i-viewer {\n  background: black;\n  position: absolute;\n  width: 100vw;\n  height: calc(100vh - 50px);\n  top: 50px;\n  left: 0;\n  overflow: hidden;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-viewer-image {\n  border-radius: 10px;\n  position: absolute;\n  left: 0;\n  top: 0;\n  transition: opacity 0.3s ease;\n  opacity: 1; }\n  .-i-viewer-image:hidden {\n    opacity: 0; }\n\n.-i-loader {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin: auto;\n  width: 10px;\n  height: 10px;\n  background-color: #FFFFFF;\n  animation: rotate 1s infinite ease-in-out;\n  transition: opacity 1s ease; }\n\n.-i-loader-stop {\n  animation-iteration-count: 0;\n  opacity: 0.2;\n  transform: scale(0.5); }\n\n@keyframes rotate {\n  0% {\n    transform: perspective(20px) rotateX(0deg) rotateY(0deg); }\n  50% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(0deg); }\n  100% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(-180deg); } }\n\n.home-more-btn {\n  justify-content: flex-start;\n  padding-left: 20px; }\n\n.home-title {\n  font-family: Merienda;\n  font-size: 80px;\n  color: white; }\n\n.gain {\n  color: #1294bf; }\n\n.loss {\n  color: #FF5027; }\n\n.blue {\n  color: #1294bf;\n  background: #171a1c; }\n\n.blue-inv {\n  color: #171a1c;\n  background: #1294bf; }\n\n.opaque {\n  opacity: 0 !important; }\n\n.app-title {\n  font-family: Merienda;\n  font-size: 50px;\n  text-align: center;\n  color: #95B4C0; }\n\n.-i-overlay {\n  background: rgba(64, 94, 109, 0.86); }\n\n.noselect {\n  -webkit-touch-callout: none;\n  /* iOS Safari */\n  -webkit-user-select: none;\n  /* Safari */\n  -khtml-user-select: none;\n  /* Konqueror HTML */\n  -moz-user-select: none;\n  /* Firefox */\n  -ms-user-select: none;\n  /* Internet Explorer/Edge */\n  user-select: none;\n  /* Non-prefixed version, currently\n                                  supported by Chrome and Opera */ }\n\n.select {\n  -webkit-touch-callout: initial;\n  /* iOS Safari */\n  -webkit-user-select: initial;\n  /* Safari */\n  -khtml-user-select: initial;\n  /* Konqueror HTML */\n  -moz-user-select: initial;\n  /* Firefox */\n  -ms-user-select: initial;\n  /* Internet Explorer/Edge */\n  user-select: initial;\n  /* Non-prefixed version, currently\n                                  supported by Chrome and Opera */ }\n\n* {\n  -webkit-touch-callout: none;\n  /* iOS Safari */\n  -webkit-user-select: none;\n  /* Safari */\n  -khtml-user-select: none;\n  /* Konqueror HTML */\n  -moz-user-select: none;\n  /* Firefox */\n  -ms-user-select: none;\n  /* Internet Explorer/Edge */\n  user-select: none;\n  /* Non-prefixed version, currently */ }\n\nhtml {\n  background: #21282c; }\n\nbody {\n  background: #21282c;\n  color: #95B4C0;\n  text-rendering: geometricPrecision;\n  font-size: 14px;\n  overflow: hidden;\n  transition: color 0.3s ease; }\n\n.hidden2 {\n  visibility: hidden; }\n\n.b0 {\n  background: #171a1c;\n  color: #95B4C0; }\n\n.b1 {\n  background: #21282c;\n  color: #95B4C0; }\n\n.b1a {\n  background: #243035;\n  color: #95B4C0; }\n\n.b2 {\n  background: #365463;\n  color: white; }\n\n.b3 {\n  background: #95B4C0;\n  color: #171a1c; }\n\n.bg-highlight {\n  background: cyan;\n  color: #171a1c; }\n\n.bg-dark {\n  background: #171a1c;\n  color: #95B4C0; }\n\n.bg-light {\n  background: #95B4C0;\n  color: #171a1c; }\n\ndiv.btn {\n  flex-shrink: 0;\n  height: 50px;\n  cursor: pointer;\n  text-transform: uppercase;\n  text-rendering: geometricPrecision;\n  font-size: 12px; }\n\n.btn-sidebar {\n  height: 50px;\n  background: #95B4C0;\n  color: #171a1c; }\n\n.active {\n  background: #365463;\n  color: #95B4C0; }\n\n.slideshow {\n  height: 100%;\n  width: 100%; }\n  .slideshow img {\n    width: auto;\n    height: auto; }\n\n.pin-btn {\n  transition: background 0.3s ease;\n  width: 50px;\n  flex-shrink: 0;\n  transition: opacity 0.3s ease; }\n  .pin-btn:hover {\n    background: rgba(0, 0, 0, 0.1); }\n  .pin-btn.hidden-pin-btn {\n    opacity: 0; }\n  .pin-btn.active-pin {\n    background: rgba(0, 0, 0, 0.1); }\n\n.modal-label {\n  position: absolute;\n  left: 0px;\n  top: 0px;\n  height: 50px;\n  padding-left: 25px;\n  line-height: 50px;\n  font-family: 'Roboto Slab', serif;\n  opacity: 0.75; }\n\n.modal-label-pre {\n  color: grey; }\n\n.btn-add {\n  background: rgba(0, 0, 0, 0.1); }\n\n.stat-label {\n  padding: 0px 5px;\n  opacity: 0.5; }\n\n.stat-val {\n  padding: 0px 5px; }\n\n.view-sub {\n  background: #171a1c; }\n\n.view-bar {\n  background: #365463; }\n\n.view-error {\n  width: 100%;\n  height: 100%;\n  background: #de3232;\n  color: white;\n  font-weight: 700;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n  .view-error .error-code {\n    opacity: 0.5;\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    padding: 10px; }\n\n.error-bg {\n  background: #de3232;\n  color: white; }\n\n.error {\n  color: #de3232; }\n\n.show-listitem-pins {\n  position: absolute;\n  right: 0px; }\n\n.pin-link {\n  background: white; }\n\n.pin-title {\n  background: rgba(0, 0, 0, 0.06);\n  height: auto;\n  position: absolute;\n  color: white;\n  font-family: 'Roboto Slab', serif;\n  bottom: 10%;\n  padding: 5px 10px;\n  width: 100%;\n  left: 0px; }\n\n.pin-wrap {\n  width: 100%;\n  height: 100%;\n  position: relative; }\n\n.pin {\n  cursor: pointer;\n  overflow: hidden;\n  position: relative;\n  height: calc( 100% - 10px);\n  border-radius: 5px;\n  width: calc( 100% - 10px); }\n  .pin .pin_icon {\n    opacity: 0;\n    transition: opacity 0.3s ease; }\n  .pin:hover .pin_icon {\n    opacity: 0.3; }\n\n.modal-link {\n  min-width: 400px;\n  height: auto; }\n\n.invite-link {\n  line-height: 50px;\n  color: #1294bf;\n  font-family: 'Roboto Slab', serif;\n  text-align: center; }\n  .invite-link span {\n    text-align: center;\n    width: 100%; }\n\n.pins {\n  background: #171a1c; }\n  .pins .pins-options {\n    display: flex;\n    height: 50px; }\n  .pins .grid-inner {\n    width: calc(100% - 20px);\n    margin: 0px 10px;\n    margin-top: 10px; }\n\n.pin-img {\n  transform: none !important;\n  background-size: cover;\n  background-position: center; }\n\n.pin-textsms {\n  background: #131313;\n  color: #e0e0e0;\n  font-size: 16px;\n  font-family: 'Roboto Slab', serif;\n  padding: 30px; }\n\n.list {\n  overflow-y: scroll;\n  overflow-x: hidden;\n  -webkit-overflow-scrolling: touch;\n  display: block; }\n\n.list-alt {\n  background: rgba(0, 0, 0, 0.06); }\n\n.list-content {\n  display: block;\n  color: #95B4C0;\n  font-size: 15px; }\n\n.sub {\n  font-size: 12px;\n  opacity: 0.8; }\n\nspan {\n  opacity: 0.999; }\n\n.expand-btn i {\n  transition: transform 0.3s ease; }\n\n.btn-rotate i {\n  transition: transform 0.4s cubic-bezier(0.25, 0.34, 0, 1); }\n\n.btn-rotate-90 i {\n  transform: rotate(-90deg); }\n\n.expand-btn.expanded i {\n  transform: rotate(45deg); }\n\n.todo-date {\n  transition: color 0.3s ease;\n  line-height: 50px;\n  padding-left: 10px;\n  font-size: 13px;\n  text-transform: uppercase;\n  font-weight: 500; }\n  .todo-date span {\n    opacity: 0.8; }\n  .todo-date.done {\n    color: #C08F84; }\n\n.check-btn.check-btn-done {\n  color: #C08F84; }\n\n.check-btn {\n  color: #171a1c; }\n  .check-btn i {\n    transition: color 0.3s ease; }\n  .check-btn:hover i {\n    color: #95B4C0 !important; }\n\n.todo.done {\n  color: #C08F84; }\n  .todo.done i {\n    color: #C08F84; }\n\n.todo.undone:hover i {\n  color: #95B4C0; }\n\n.todo-sub-item {\n  padding-left: 50px; }\n\n.pin_icon {\n  position: absolute;\n  top: 0px;\n  right: 0px;\n  background: white;\n  border-radius: 0px 5px;\n  padding: 6px;\n  font-size: 19px;\n  opacity: 0.3;\n  color: black; }\n\n.todo-wrap {\n  transition: color 0.3s ease;\n  cursor: pointer; }\n  .todo-wrap .name {\n    font-family: 'Roboto Slab', serif;\n    font-size: 16px;\n    padding-left: 15px;\n    line-height: 50px; }\n  .todo-wrap .created_at {\n    font-family: Arial;\n    transition: opacity 0.2s ease;\n    position: absolute;\n    right: 0px;\n    top: 0px;\n    opacity: 0.2;\n    color: whitesmoke;\n    height: 50px;\n    line-height: 50px;\n    padding-right: 5px; }\n  .todo-wrap.done i {\n    color: #C08F84; }\n  .todo-wrap .completed {\n    color: #C08F84; }\n  .todo-wrap.done {\n    color: #C08F84; }\n\n.main-menu {\n  z-index: 3; }\n\n.photo_count {\n  position: absolute;\n  bottom: 5px;\n  right: 5px;\n  line-height: 14px;\n  font-size: 14px;\n  opacity: 0.99; }\n\n.list-item {\n  background: #243035; }\n  .list-item:hover {\n    background: #171a1c;\n    transition: background 0.3s ease;\n    cursor: pointer; }\n\n.list-count {\n  opacity: 0.99;\n  font-family: 'Roboto Slab', serif;\n  color: grey;\n  font-size: 24px;\n  padding: 0px 10px;\n  width: auto; }\n  .list-count div {\n    transform: none !important; }\n\n.list-name {\n  font-size: 20px;\n  font-family: 'Roboto Slab', serif;\n  color: #95B4C0; }\n\n.room-members {\n  padding: 20px 100px;\n  flex-wrap: wrap; }\n\n.profile-self-label {\n  position: absolute;\n  height: 10px;\n  width: 10px;\n  background: #05bdff;\n  bottom: 6%;\n  right: 8%;\n  border-radius: 5px; }\n\n.profile-mini-selected {\n  background: rgba(0, 0, 0, 0.6);\n  align-items: center;\n  border-radius: 50%;\n  display: flex;\n  /* border: 12px solid black; */\n  height: 105%;\n  width: 105%;\n  margin-top: -2.5%;\n  margin-left: -2.5%;\n  align-content: center;\n  justify-content: center; }\n\n.search-results {\n  margin-top: 10px;\n  display: flex;\n  justify-content: center; }\n  .search-results .profile-mini {\n    margin: 10px; }\n\n.profile-mini {\n  position: relative;\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-end;\n  width: 100%;\n  overflow: hidden;\n  height: 100%;\n  max-width: 120px;\n  max-height: 120px;\n  background: #243035;\n  padding: 5px;\n  cursor: pointer;\n  transition: background 0.3s ease; }\n  .profile-mini:hover {\n    background: #171a1c; }\n  .profile-mini .profile-name {\n    font-family: 'Roboto Slab', serif;\n    color: #95B4C0;\n    line-height: 30px;\n    font-size: 16px;\n    text-align: center;\n    height: 30px; }\n  .profile-mini .avatar {\n    background: #2b383e;\n    position: relative;\n    cursor: pointer;\n    background-position: center;\n    background-size: cover;\n    height: 60%;\n    width: 60%;\n    border-radius: 50%; }\n  .profile-mini .name {\n    animation: color 0.3s ease;\n    font-family: Merienda; }\n\n.button-person-add {\n  color: #5c6467; }\n\n.login-form {\n  display: flex;\n  flex-direction: column;\n  justify-content: flex-end;\n  width: 100%;\n  height: 100%;\n  margin: 0; }\n\n.title {\n  width: 100%;\n  text-align: center;\n  line-height: 30px;\n  font-weight: 600;\n  text-transform: uppercase;\n  opacity: 0.5; }\n\n.modal {\n  padding: 20px; }\n\n.lists-grid {\n  overflow: visible;\n  height: auto; }\n\n.lists-inner {\n  overflow: scroll; }\n\n.lists-options {\n  background: #171a1c; }\n\n.form {\n  min-width: 400px;\n  min-height: 200px; }\n  .form.pin-form {\n    min-height: 300px; }\n  .form input {\n    font-size: 16px !important; }\n  .form .input-amount-submit {\n    left: 0px;\n    opacity: 0.99;\n    text-transform: uppercase;\n    margin-top: 50px;\n    width: 50% !important;\n    left: 25%; }\n  .form .input-amount-submit-s {\n    color: #95B4C0;\n    background: rgba(0, 0, 0, 0.1); }\n  .form .input-amount-submit-p {\n    color: #171a1c;\n    background: #95B4C0; }\n  .form .input-amount-submit-false {\n    color: #365463; }\n\n.list-title {\n  opacity: 0.99;\n  font-family: 'Roboto Slab', serif;\n  font-size: 16px;\n  font-weight: 500;\n  line-height: 54px;\n  padding: 0px 10px; }\n\n.viewer {\n  background: black;\n  position: absolute;\n  width: 100vw;\n  height: calc(100vh - 50px);\n  top: 50px;\n  left: 0;\n  overflow: hidden; }\n\n.viewer-image {\n  border-radius: 10px;\n  position: absolute;\n  left: 0;\n  top: 0; }\n\n.add-btn {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center;\n  height: 100%;\n  width: 100%;\n  cursor: pointer;\n  background: rgba(0, 0, 0, 0.06);\n  transition: background 0.3s ease; }\n  .add-btn:hover {\n    background: #171a1c; }\n\n.add-friend-view {\n  width: 80%;\n  min-width: 450px;\n  max-height: 500px; }\n\n.btn-opaque {\n  opacity: 0.4;\n  transition: opacity 0.3s ease; }\n  .btn-opaque:hover {\n    opacity: 0.6; }\n\n.user-overlay-delete {\n  cursor: pointer;\n  height: 100%;\n  width: 100%;\n  position: absolute;\n  left: 0;\n  top: 0;\n  background: rgba(23, 26, 28, 0.83);\n  opacity: 1;\n  transition: opacity 0.3s ease;\n  z-index: 10;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n  .user-overlay-delete i {\n    color: red; }\n  .user-overlay-delete.hidden {\n    opacity: 0; }\n  .user-overlay-delete:hover {\n    opacity: 1; }\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 41 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule invariant
- */
-
-
-
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
-
-var invariant = function (condition, format, a, b, c, d, e, f) {
-  if (true) {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
-    }
-  }
-
-  if (!condition) {
-    var error;
-    if (format === undefined) {
-      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error('Invariant Violation: ' + format.replace(/%s/g, function () {
-        return args[argIndex++];
-      }));
-    }
-
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
-  }
-};
-
-module.exports = invariant;
-
-/***/ }),
-/* 42 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/**
- * Copyright (c) 2014-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
-
-module.exports.Dispatcher = __webpack_require__(43);
-
-
-/***/ }),
-/* 43 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/**
- * Copyright (c) 2014-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule Dispatcher
- * 
- * @preventMunge
- */
-
-
-
-exports.__esModule = true;
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var invariant = __webpack_require__(41);
-
-var _prefix = 'ID_';
-
-/**
- * Dispatcher is used to broadcast payloads to registered callbacks. This is
- * different from generic pub-sub systems in two ways:
- *
- *   1) Callbacks are not subscribed to particular events. Every payload is
- *      dispatched to every registered callback.
- *   2) Callbacks can be deferred in whole or part until other callbacks have
- *      been executed.
- *
- * For example, consider this hypothetical flight destination form, which
- * selects a default city when a country is selected:
- *
- *   var flightDispatcher = new Dispatcher();
- *
- *   // Keeps track of which country is selected
- *   var CountryStore = {country: null};
- *
- *   // Keeps track of which city is selected
- *   var CityStore = {city: null};
- *
- *   // Keeps track of the base flight price of the selected city
- *   var FlightPriceStore = {price: null}
- *
- * When a user changes the selected city, we dispatch the payload:
- *
- *   flightDispatcher.dispatch({
- *     actionType: 'city-update',
- *     selectedCity: 'paris'
- *   });
- *
- * This payload is digested by `CityStore`:
- *
- *   flightDispatcher.register(function(payload) {
- *     if (payload.actionType === 'city-update') {
- *       CityStore.city = payload.selectedCity;
- *     }
- *   });
- *
- * When the user selects a country, we dispatch the payload:
- *
- *   flightDispatcher.dispatch({
- *     actionType: 'country-update',
- *     selectedCountry: 'australia'
- *   });
- *
- * This payload is digested by both stores:
- *
- *   CountryStore.dispatchToken = flightDispatcher.register(function(payload) {
- *     if (payload.actionType === 'country-update') {
- *       CountryStore.country = payload.selectedCountry;
- *     }
- *   });
- *
- * When the callback to update `CountryStore` is registered, we save a reference
- * to the returned token. Using this token with `waitFor()`, we can guarantee
- * that `CountryStore` is updated before the callback that updates `CityStore`
- * needs to query its data.
- *
- *   CityStore.dispatchToken = flightDispatcher.register(function(payload) {
- *     if (payload.actionType === 'country-update') {
- *       // `CountryStore.country` may not be updated.
- *       flightDispatcher.waitFor([CountryStore.dispatchToken]);
- *       // `CountryStore.country` is now guaranteed to be updated.
- *
- *       // Select the default city for the new country
- *       CityStore.city = getDefaultCityForCountry(CountryStore.country);
- *     }
- *   });
- *
- * The usage of `waitFor()` can be chained, for example:
- *
- *   FlightPriceStore.dispatchToken =
- *     flightDispatcher.register(function(payload) {
- *       switch (payload.actionType) {
- *         case 'country-update':
- *         case 'city-update':
- *           flightDispatcher.waitFor([CityStore.dispatchToken]);
- *           FlightPriceStore.price =
- *             getFlightPriceStore(CountryStore.country, CityStore.city);
- *           break;
- *     }
- *   });
- *
- * The `country-update` payload will be guaranteed to invoke the stores'
- * registered callbacks in order: `CountryStore`, `CityStore`, then
- * `FlightPriceStore`.
- */
-
-var Dispatcher = (function () {
-  function Dispatcher() {
-    _classCallCheck(this, Dispatcher);
-
-    this._callbacks = {};
-    this._isDispatching = false;
-    this._isHandled = {};
-    this._isPending = {};
-    this._lastID = 1;
-  }
-
-  /**
-   * Registers a callback to be invoked with every dispatched payload. Returns
-   * a token that can be used with `waitFor()`.
-   */
-
-  Dispatcher.prototype.register = function register(callback) {
-    var id = _prefix + this._lastID++;
-    this._callbacks[id] = callback;
-    return id;
-  };
-
-  /**
-   * Removes a callback based on its token.
-   */
-
-  Dispatcher.prototype.unregister = function unregister(id) {
-    !this._callbacks[id] ?  true ? invariant(false, 'Dispatcher.unregister(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
-    delete this._callbacks[id];
-  };
-
-  /**
-   * Waits for the callbacks specified to be invoked before continuing execution
-   * of the current callback. This method should only be used by a callback in
-   * response to a dispatched payload.
-   */
-
-  Dispatcher.prototype.waitFor = function waitFor(ids) {
-    !this._isDispatching ?  true ? invariant(false, 'Dispatcher.waitFor(...): Must be invoked while dispatching.') : invariant(false) : undefined;
-    for (var ii = 0; ii < ids.length; ii++) {
-      var id = ids[ii];
-      if (this._isPending[id]) {
-        !this._isHandled[id] ?  true ? invariant(false, 'Dispatcher.waitFor(...): Circular dependency detected while ' + 'waiting for `%s`.', id) : invariant(false) : undefined;
-        continue;
-      }
-      !this._callbacks[id] ?  true ? invariant(false, 'Dispatcher.waitFor(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
-      this._invokeCallback(id);
-    }
-  };
-
-  /**
-   * Dispatches a payload to all registered callbacks.
-   */
-
-  Dispatcher.prototype.dispatch = function dispatch(payload) {
-    !!this._isDispatching ?  true ? invariant(false, 'Dispatch.dispatch(...): Cannot dispatch in the middle of a dispatch.') : invariant(false) : undefined;
-    this._startDispatching(payload);
-    try {
-      for (var id in this._callbacks) {
-        if (this._isPending[id]) {
-          continue;
-        }
-        this._invokeCallback(id);
-      }
-    } finally {
-      this._stopDispatching();
-    }
-  };
-
-  /**
-   * Is this Dispatcher currently dispatching.
-   */
-
-  Dispatcher.prototype.isDispatching = function isDispatching() {
-    return this._isDispatching;
-  };
-
-  /**
-   * Call the callback stored with the given id. Also do some internal
-   * bookkeeping.
-   *
-   * @internal
-   */
-
-  Dispatcher.prototype._invokeCallback = function _invokeCallback(id) {
-    this._isPending[id] = true;
-    this._callbacks[id](this._pendingPayload);
-    this._isHandled[id] = true;
-  };
-
-  /**
-   * Set up bookkeeping needed when dispatching.
-   *
-   * @internal
-   */
-
-  Dispatcher.prototype._startDispatching = function _startDispatching(payload) {
-    for (var id in this._callbacks) {
-      this._isPending[id] = false;
-      this._isHandled[id] = false;
-    }
-    this._pendingPayload = payload;
-    this._isDispatching = true;
-  };
-
-  /**
-   * Clear bookkeeping used for dispatching.
-   *
-   * @internal
-   */
-
-  Dispatcher.prototype._stopDispatching = function _stopDispatching() {
-    delete this._pendingPayload;
-    this._isDispatching = false;
-  };
-
-  return Dispatcher;
-})();
-
-module.exports = Dispatcher;
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports) {
-
-module.exports = isPromise;
-
-function isPromise(obj) {
-  return !!obj && (typeof obj === 'object' || typeof obj === 'function') && typeof obj.then === 'function';
-}
-
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var has = Object.prototype.hasOwnProperty;
-
-/**
- * Decode a URI encoded string.
- *
- * @param {String} input The URI encoded string.
- * @returns {String} The decoded string.
- * @api private
- */
-function decode(input) {
-  return decodeURIComponent(input.replace(/\+/g, ' '));
-}
-
-/**
- * Simple query string parser.
- *
- * @param {String} query The query string that needs to be parsed.
- * @returns {Object}
- * @api public
- */
-function querystring(query) {
-  var parser = /([^=?&]+)=?([^&]*)/g
-    , result = {}
-    , part;
-
-  //
-  // Little nifty parsing hack, leverage the fact that RegExp.exec increments
-  // the lastIndex property so we can continue executing this loop until we've
-  // parsed all results.
-  //
-  for (;
-    part = parser.exec(query);
-    result[decode(part[1])] = decode(part[2])
-  );
-
-  return result;
-}
-
-/**
- * Transform a query string to an object.
- *
- * @param {Object} obj Object that should be transformed.
- * @param {String} prefix Optional prefix.
- * @returns {String}
- * @api public
- */
-function querystringify(obj, prefix) {
-  prefix = prefix || '';
-
-  var pairs = [];
-
-  //
-  // Optionally prefix with a '?' if needed
-  //
-  if ('string' !== typeof prefix) prefix = '?';
-
-  for (var key in obj) {
-    if (has.call(obj, key)) {
-      pairs.push(encodeURIComponent(key) +'='+ encodeURIComponent(obj[key]));
-    }
-  }
-
-  return pairs.length ? prefix + pairs.join('&') : '';
-}
-
-//
-// Expose the module.
-//
-exports.stringify = querystringify;
-exports.parse = querystring;
-
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-/**
- * Check if we're required to add a port number.
- *
- * @see https://url.spec.whatwg.org/#default-port
- * @param {Number|String} port Port number we need to check
- * @param {String} protocol Protocol we need to check against.
- * @returns {Boolean} Is it a default port for the given protocol
- * @api private
- */
-module.exports = function required(port, protocol) {
-  protocol = protocol.split(':')[0];
-  port = +port;
-
-  if (!port) return false;
-
-  switch (protocol) {
-    case 'http':
-    case 'ws':
-    return port !== 80;
-
-    case 'https':
-    case 'wss':
-    return port !== 443;
-
-    case 'ftp':
-    return port !== 21;
-
-    case 'gopher':
-    return port !== 70;
-
-    case 'file':
-    return false;
-  }
-
-  return port !== 0;
-};
-
-
-/***/ }),
-/* 47 */
-/***/ (function(module, exports) {
-
-
-/**
- * When source maps are enabled, `style-loader` uses a link element with a data-uri to
- * embed the css on the page. This breaks all relative urls because now they are relative to a
- * bundle instead of the current page.
- *
- * One solution is to only use full urls, but that may be impossible.
- *
- * Instead, this function "fixes" the relative urls to be absolute according to the current page location.
- *
- * A rudimentary test suite is located at `test/fixUrls.js` and can be run via the `npm test` command.
- *
- */
-
-module.exports = function (css) {
-  // get current location
-  var location = typeof window !== "undefined" && window.location;
-
-  if (!location) {
-    throw new Error("fixUrls requires window.location");
-  }
-
-	// blank or null?
-	if (!css || typeof css !== "string") {
-	  return css;
-  }
-
-  var baseUrl = location.protocol + "//" + location.host;
-  var currentDir = baseUrl + location.pathname.replace(/\/[^\/]*$/, "/");
-
-	// convert each url(...)
-	/*
-	This regular expression is just a way to recursively match brackets within
-	a string.
-
-	 /url\s*\(  = Match on the word "url" with any whitespace after it and then a parens
-	   (  = Start a capturing group
-	     (?:  = Start a non-capturing group
-	         [^)(]  = Match anything that isn't a parentheses
-	         |  = OR
-	         \(  = Match a start parentheses
-	             (?:  = Start another non-capturing groups
-	                 [^)(]+  = Match anything that isn't a parentheses
-	                 |  = OR
-	                 \(  = Match a start parentheses
-	                     [^)(]*  = Match anything that isn't a parentheses
-	                 \)  = Match a end parentheses
-	             )  = End Group
-              *\) = Match anything and then a close parens
-          )  = Close non-capturing group
-          *  = Match anything
-       )  = Close capturing group
-	 \)  = Match a close parens
-
-	 /gi  = Get all matches, not the first.  Be case insensitive.
-	 */
-	var fixedCss = css.replace(/url\s*\(((?:[^)(]|\((?:[^)(]+|\([^)(]*\))*\))*)\)/gi, function(fullMatch, origUrl) {
-		// strip quotes (if they exist)
-		var unquotedOrigUrl = origUrl
-			.trim()
-			.replace(/^"(.*)"$/, function(o, $1){ return $1; })
-			.replace(/^'(.*)'$/, function(o, $1){ return $1; });
-
-		// already a full url? no change
-		if (/^(#|data:|http:\/\/|https:\/\/|file:\/\/\/)/i.test(unquotedOrigUrl)) {
-		  return fullMatch;
-		}
-
-		// convert the url to a full url
-		var newUrl;
-
-		if (unquotedOrigUrl.indexOf("//") === 0) {
-		  	//TODO: should we add protocol?
-			newUrl = unquotedOrigUrl;
-		} else if (unquotedOrigUrl.indexOf("/") === 0) {
-			// path should be relative to the base url
-			newUrl = baseUrl + unquotedOrigUrl; // already starts with '/'
-		} else {
-			// path should be relative to current directory
-			newUrl = currentDir + unquotedOrigUrl.replace(/^\.\//, ""); // Strip leading './'
-		}
-
-		// send back the fixed url(...)
-		return "url(" + JSON.stringify(newUrl) + ")";
-	});
-
-	// send back the fixed css
-	return fixedCss;
-};
-
-
-/***/ }),
-/* 48 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(34);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./Button.scss", function() {
-			var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./Button.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 49 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(35);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./SlideButton.scss", function() {
-			var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/sass-loader/lib/loader.js!./SlideButton.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 50 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(36);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Grid.scss", function() {
-			var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Grid.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 51 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(38);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Modal.scss", function() {
-			var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Modal.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
 /* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
-// style-loader: Adds some css to the DOM by adding a <style> tag
+var Component, Slide, Viewer, h, ref,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
 
-// load the styles
-var content = __webpack_require__(39);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// add the styles to the DOM
-var update = __webpack_require__(4)(content, {});
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Overlay.scss", function() {
-			var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/sass-loader/lib/loader.js!./Overlay.scss");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
+ref = __webpack_require__(0), h = ref.h, Component = ref.Component;
+
+Slide = __webpack_require__(5);
+
+Viewer = (function(superClass) {
+  extend(Viewer, superClass);
+
+  function Viewer(props) {
+    this.render = bind(this.render, this);
+    this.onWheelDelta = bind(this.onWheelDelta, this);
+    this.onMouseMove = bind(this.onMouseMove, this);
+    this.imageLoaded = bind(this.imageLoaded, this);
+    this.onUpdate = bind(this.onUpdate, this);
+    Viewer.__super__.constructor.call(this, props);
+    this.state = {
+      loaded: false,
+      scale: 1,
+      min_scale: 1
+    };
+    this.stage = {};
+  }
+
+  Viewer.prototype.onUpdate = function() {
+    var str;
+    if (!this._img) {
+      return;
+    }
+    str = 'translate3d(' + this.stage.x + 'px,' + this.stage.y + 'px,0px) scale(' + this.stage.scale + ')';
+    return this._img.style.transform = str;
+  };
+
+  Viewer.prototype.imageLoaded = function() {
+    var c_h, c_w, i_h, i_w;
+    this.setInitialScale();
+    if (!this._img) {
+      return;
+    }
+    i_w = this._img.naturalWidth;
+    i_h = this._img.naturalHeight;
+    c_w = this._root.clientWidth;
+    c_h = this._root.clientHeight;
+    this._img.style.width = i_w;
+    this._img.style.height = i_h;
+    TweenLite.set(this.stage, {
+      x: c_w / 2 - i_w / 2,
+      y: c_h / 2 - i_h / 2
+    });
+    this.onUpdate();
+    return this.setState({
+      loaded: true
+    });
+  };
+
+  Viewer.prototype.setInitialScale = function() {
+    var c_h, c_w, i_h, i_w, s, s_h, s_w;
+    if (!this._img) {
+      return;
+    }
+    i_w = this._img.naturalWidth;
+    i_h = this._img.naturalHeight;
+    c_w = this._root.clientWidth;
+    c_h = this._root.clientHeight;
+    if (i_w <= c_w && i_h <= c_h) {
+      return;
+    }
+    s_w = c_w / i_w * 0.9;
+    s_h = c_h / i_h * 0.9;
+    if (s_h < s_w) {
+      s = s_h;
+    } else {
+      s = s_w;
+    }
+    this.state.min_scale = s;
+    this.state.scale = s;
+    return TweenLite.set(this.stage, {
+      scale: s,
+      onUpdate: this.onUpdate
+    });
+  };
+
+  Viewer.prototype.onMouseMove = function(e, get) {
+    var c_h, c_w, c_x, c_y, i_h, i_h0, i_w, i_w0, i_x, i_y, x, y;
+    if (!this._img) {
+      return;
+    }
+    i_w0 = this._img.naturalWidth;
+    i_h0 = this._img.naturalHeight;
+    i_w = this._img.naturalWidth * this.state.scale;
+    i_h = this._img.naturalHeight * this.state.scale;
+    c_w = this._root.clientWidth;
+    c_h = this._root.clientHeight;
+    i_x = (-e.layerX + c_w / 2) * 1.3;
+    c_x = c_w / 2 - i_w0 / 2;
+    i_y = (-(e.clientY - this.pos.top) + c_h / 2) * 1.15;
+    c_y = c_h / 2 - i_h0 / 2;
+    x = c_x + (i_x * (i_w - c_w) / c_w);
+    y = c_y + (i_y * (i_h - c_h) / c_h);
+    if (i_w <= c_w) {
+      x = c_w / 2 - i_w0 / 2;
+    }
+    if (i_h <= c_h) {
+      y = c_h / 2 - i_h0 / 2;
+    }
+    if (get === true) {
+      return [x, y];
+    }
+    return TweenLite.to(this.stage, 0.2, {
+      x: x,
+      y: y,
+      onUpdate: this.onUpdate
+    });
+  };
+
+  Viewer.prototype.onWheelDelta = function(e) {
+    var c_h, c_w, i_h, i_h0, i_w, i_w0, n_s, pos;
+    if (!this._img) {
+      return;
+    }
+    this.state.scale = this.state.scale + e.deltaY * 0.005;
+    if (this.state.scale > 1) {
+      this.state.scale = 1;
+    } else if (this.state.scale < this.state.min_scale) {
+      this.state.scale = this.state.min_scale;
+    }
+    i_w0 = this._img.naturalWidth;
+    i_h0 = this._img.naturalHeight;
+    i_w = this._img.naturalWidth * this.state.scale;
+    i_h = this._img.naturalHeight * this.state.scale;
+    c_w = this._root.clientWidth;
+    c_h = this._root.clientHeight;
+    n_s = {};
+    n_s.scale = this.state.scale;
+    if (i_w <= c_w) {
+      n_s.x = c_w / 2 - i_w0 / 2;
+    }
+    if (i_h <= c_h) {
+      n_s.y = c_h / 2 - i_h0 / 2;
+    }
+    pos = this.onMouseMove(e, true);
+    if (!pos.length) {
+      return;
+    }
+    n_s.x = pos[0];
+    n_s.y = pos[1];
+    n_s.onUpdate = this.onUpdate;
+    return TweenLite.to(this.stage, 0.4, n_s);
+  };
+
+  Viewer.prototype.flushState = function() {
+    this.state.loaded = false;
+    this.stage = {};
+    return this.min_scale = 1;
+  };
+
+  Viewer.prototype.componentDidUpdate = function(props) {
+    return this.pos = this._root.getBoundingClientRect();
+  };
+
+  Viewer.prototype.componentDidMount = function() {
+    this.state.scale = 1;
+    this.state.min_scale = 1;
+    this.pos = this._root.getBoundingClientRect();
+    if (this.state.loaded === false) {
+      if (this._img.complete) {
+        return this.imageLoaded();
+      }
+    }
+  };
+
+  Viewer.prototype.render = function(props) {
+    var loader;
+    if (!this.state.loaded) {
+      loader = h('div', {
+        className: '-i-loader'
+      });
+    }
+    return h('div', {
+      ref: (function(_this) {
+        return function(e) {
+          return _this._root = e;
+        };
+      })(this),
+      onMouseMove: this.onMouseMove,
+      onMouseWheel: this.onWheelDelta,
+      className: '-i-viewer',
+      id: '-i-viewer',
+      onClick: (function(_this) {
+        return function(e) {
+          if (_this.props.onClick) {
+            return _this.props.onClick(e);
+          }
+        };
+      })(this)
+    }, h('img', {
+      id: '-i-viewer-image',
+      onClick: (function(_this) {
+        return function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        };
+      })(this),
+      ref: (function(_this) {
+        return function(e) {
+          return _this._img = e;
+        };
+      })(this),
+      src: this.props.img,
+      onLoad: this.imageLoaded,
+      className: '-i-viewer-image ' + (!this.state.loaded && 'hidden' || "")
+    }), loader);
+  };
+
+  return Viewer;
+
+})(Component);
+
+module.exports = Viewer;
+
 
 /***/ }),
 /* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* WEBPACK VAR INJECTION */(function(global) {
 
-var required = __webpack_require__(46)
-  , qs = __webpack_require__(45)
-  , protocolre = /^([a-z][a-z0-9.+-]*:)?(\/\/)?([\S\s]*)/i
-  , slashes = /^[A-Za-z][A-Za-z0-9+-.]*:\/\//;
 
-/**
- * These are the parse rules for the URL parser, it informs the parser
- * about:
- *
- * 0. The char it Needs to parse, if it's a string it should be done using
- *    indexOf, RegExp using exec and NaN means set as current value.
- * 1. The property we should set when parsing this value.
- * 2. Indication if it's backwards or forward parsing, when set as number it's
- *    the value of extra chars that should be split off.
- * 3. Inherit from location if non existing in the parser.
- * 4. `toLowerCase` the resulting value.
- */
-var rules = [
-  ['#', 'hash'],                        // Extract from the back.
-  ['?', 'query'],                       // Extract from the back.
-  ['/', 'pathname'],                    // Extract from the back.
-  ['@', 'auth', 1],                     // Extract from the front.
-  [NaN, 'host', undefined, 1, 1],       // Set left over value.
-  [/:(\d+)$/, 'port', undefined, 1],    // RegExp the back.
-  [NaN, 'hostname', undefined, 1, 1]    // Set left over.
-];
 
-/**
- * These properties should not be copied or inherited from. This is only needed
- * for all non blob URL's as a blob URL does not include a hash, only the
- * origin.
- *
- * @type {Object}
- * @private
- */
-var ignore = { hash: 1, query: 1 };
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
 
-/**
- * The location object differs when your code is loaded through a normal page,
- * Worker or through a worker using a blob. And with the blobble begins the
- * trouble as the location object will contain the URL of the blob, not the
- * location of the page where our code is loaded in. The actual origin is
- * encoded in the `pathname` so we can thankfully generate a good "default"
- * location from it so we can generate proper relative URL's again.
- *
- * @param {Object|String} loc Optional default location object.
- * @returns {Object} lolcation object.
- * @api public
- */
-function lolcation(loc) {
-  loc = loc || global.location || {};
+var preact = __webpack_require__(0);
 
-  var finaldestination = {}
-    , type = typeof loc
-    , key;
+var bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  if ('blob:' === loc.protocol) {
-    finaldestination = new URL(unescape(loc.pathname), {});
-  } else if ('string' === type) {
-    finaldestination = new URL(loc, {});
-    for (key in ignore) delete finaldestination[key];
-  } else if ('object' === type) {
-    for (key in loc) {
-      if (key in ignore) continue;
-      finaldestination[key] = loc[key];
+function connectToStores(Spec) {
+  
+
+  // Check for required static methods.
+  if (!Spec.getStores) {
+    throw new Error('connectToStores() expects the wrapped component to have a static getStores() method');
+  }
+  if (!Spec.getPropsFromStores) {
+    throw new Error('connectToStores() expects the wrapped component to have a static getPropsFromStores() method');
+  }
+  var StoreConnection = (function(superClass) {
+    extend(StoreConnection, superClass);
+    function StoreConnection() {
+      this.render = bind(this.render, this);
+      this.getInitialState = bind(this.getInitialState, this);
+      // this.componentWillMount = bind(this.componentDidMount, this);
+      this.componentWillUnmount = bind(this.componentWillUnmount, this);
+      this.componentWillReceiveProps = bind(this.componentWillReceiveProps , this);
+      this.onChange = bind(this.onChange , this);
+      this.state = Spec.getPropsFromStores(this.props, this.context);
+      return StoreConnection.__super__.constructor.apply(this, arguments);
     }
+    StoreConnection.displayName = 'Stateful' + (Spec.displayName || Spec.name || 'Container')
+    StoreConnection.prototype.componentWillReceiveProps = function(nextProps) {
+      return this.setState(Spec.getPropsFromStores(nextProps, this.context));
+    };
 
-    if (finaldestination.slashes === undefined) {
-      finaldestination.slashes = slashes.test(loc.href);
-    }
-  }
+    // StoreConnection.prototype.componentWillMount = function(props, state) {
+    //   console.log('store will mount')
+    // }
 
-  return finaldestination;
-}
+    StoreConnection.prototype.componentWillMount = function(props, state) {
+      // console.log('store mounted')
+      var _this = this;
 
-/**
- * @typedef ProtocolExtract
- * @type Object
- * @property {String} protocol Protocol matched in the URL, in lowercase.
- * @property {Boolean} slashes `true` if protocol is followed by "//", else `false`.
- * @property {String} rest Rest of the URL that is not part of the protocol.
- */
-
-/**
- * Extract protocol information from a URL with/without double slash ("//").
- *
- * @param {String} address URL we want to extract from.
- * @return {ProtocolExtract} Extracted information.
- * @api private
- */
-function extractProtocol(address) {
-  var match = protocolre.exec(address);
-
-  return {
-    protocol: match[1] ? match[1].toLowerCase() : '',
-    slashes: !!match[2],
-    rest: match[3]
-  };
-}
-
-/**
- * Resolve a relative URL pathname against a base URL pathname.
- *
- * @param {String} relative Pathname of the relative URL.
- * @param {String} base Pathname of the base URL.
- * @return {String} Resolved pathname.
- * @api private
- */
-function resolve(relative, base) {
-  var path = (base || '/').split('/').slice(0, -1).concat(relative.split('/'))
-    , i = path.length
-    , last = path[i - 1]
-    , unshift = false
-    , up = 0;
-
-  while (i--) {
-    if (path[i] === '.') {
-      path.splice(i, 1);
-    } else if (path[i] === '..') {
-      path.splice(i, 1);
-      up++;
-    } else if (up) {
-      if (i === 0) unshift = true;
-      path.splice(i, 1);
-      up--;
-    }
-  }
-
-  if (unshift) path.unshift('');
-  if (last === '.' || last === '..') path.push('');
-
-  return path.join('/');
-}
-
-/**
- * The actual URL instance. Instead of returning an object we've opted-in to
- * create an actual constructor as it's much more memory efficient and
- * faster and it pleases my OCD.
- *
- * @constructor
- * @param {String} address URL we want to parse.
- * @param {Object|String} location Location defaults for relative paths.
- * @param {Boolean|Function} parser Parser for the query string.
- * @api public
- */
-function URL(address, location, parser) {
-  if (!(this instanceof URL)) {
-    return new URL(address, location, parser);
-  }
-
-  var relative, extracted, parse, instruction, index, key
-    , instructions = rules.slice()
-    , type = typeof location
-    , url = this
-    , i = 0;
-
-  //
-  // The following if statements allows this module two have compatibility with
-  // 2 different API:
-  //
-  // 1. Node.js's `url.parse` api which accepts a URL, boolean as arguments
-  //    where the boolean indicates that the query string should also be parsed.
-  //
-  // 2. The `URL` interface of the browser which accepts a URL, object as
-  //    arguments. The supplied object will be used as default values / fall-back
-  //    for relative paths.
-  //
-  if ('object' !== type && 'string' !== type) {
-    parser = location;
-    location = null;
-  }
-
-  if (parser && 'function' !== typeof parser) parser = qs.parse;
-
-  location = lolcation(location);
-
-  //
-  // Extract protocol information before running the instructions.
-  //
-  extracted = extractProtocol(address || '');
-  relative = !extracted.protocol && !extracted.slashes;
-  url.slashes = extracted.slashes || relative && location.slashes;
-  url.protocol = extracted.protocol || location.protocol || '';
-  address = extracted.rest;
-
-  //
-  // When the authority component is absent the URL starts with a path
-  // component.
-  //
-  if (!extracted.slashes) instructions[2] = [/(.*)/, 'pathname'];
-
-  for (; i < instructions.length; i++) {
-    instruction = instructions[i];
-    parse = instruction[0];
-    key = instruction[1];
-
-    if (parse !== parse) {
-      url[key] = address;
-    } else if ('string' === typeof parse) {
-      if (~(index = address.indexOf(parse))) {
-        if ('number' === typeof instruction[2]) {
-          url[key] = address.slice(0, index);
-          address = address.slice(index + instruction[2]);
-        } else {
-          url[key] = address.slice(index);
-          address = address.slice(0, index);
-        }
+      var stores = Spec.getStores(this.props, this.context);
+      this.storeListeners = stores.map(function (store) {
+        return store.listen(_this.onChange);
+      });
+      if (Spec.componentDidConnect) {
+        Spec.componentDidConnect(this.props, this.context);
       }
-    } else if ((index = parse.exec(address))) {
-      url[key] = index[1];
-      address = address.slice(0, index.index);
-    }
+    };
 
-    url[key] = url[key] || (
-      relative && instruction[3] ? location[key] || '' : ''
-    );
 
-    //
-    // Hostname, host and protocol should be lowercased so they can be used to
-    // create a proper `origin`.
-    //
-    if (instruction[4]) url[key] = url[key].toLowerCase();
-  }
+    StoreConnection.prototype.componentWillUnmount = function(props, state) {
+      this.storeListeners.forEach(function (unlisten) {
+        return unlisten();
+      });
+    };
 
-  //
-  // Also parse the supplied query string in to an object. If we're supplied
-  // with a custom parser as function use that instead of the default build-in
-  // parser.
-  //
-  if (parser) url.query = parser(url.query);
+    StoreConnection.prototype.onChange = function(props, state) {
+      this.setState(Spec.getPropsFromStores(this.props, this.context));
+    };
 
-  //
-  // If the URL is relative, resolve the pathname against the base URL.
-  //
-  if (
-      relative
-    && location.slashes
-    && url.pathname.charAt(0) !== '/'
-    && (url.pathname !== '' || location.pathname !== '')
-  ) {
-    url.pathname = resolve(url.pathname, location.pathname);
-  }
+    StoreConnection.prototype.render = function(props, state) {
+      // console.log('render store',this.state)
+      return preact.h(Spec,Object.assign({}, this.props, this.state));
+    };
 
-  //
-  // We should not add port numbers if they are already the default port number
-  // for a given protocol. As the host also contains the port number we're going
-  // override it with the hostname which contains no port number.
-  //
-  if (!required(url.port, url.protocol)) {
-    url.host = url.hostname;
-    url.port = '';
-  }
 
-  //
-  // Parse down the `auth` for the username and password.
-  //
-  url.username = url.password = '';
-  if (url.auth) {
-    instruction = url.auth.split(':');
-    url.username = instruction[0] || '';
-    url.password = instruction[1] || '';
-  }
-
-  url.origin = url.protocol && url.host && url.protocol !== 'file:'
-    ? url.protocol +'//'+ url.host
-    : 'null';
-
-  //
-  // The href is just the compiled result.
-  //
-  url.href = url.toString();
+    return StoreConnection
+  })(preact.Component)
+  return StoreConnection
 }
 
-/**
- * This is convenience method for changing properties in the URL instance to
- * insure that they all propagate correctly.
- *
- * @param {String} part          Property we need to adjust.
- * @param {Mixed} value          The newly assigned value.
- * @param {Boolean|Function} fn  When setting the query, it will be the function
- *                               used to parse the query.
- *                               When setting the protocol, double slash will be
- *                               removed from the final url if it is true.
- * @returns {URL}
- * @api public
- */
-function set(part, value, fn) {
-  var url = this;
 
-  switch (part) {
-    case 'query':
-      if ('string' === typeof value && value.length) {
-        value = (fn || qs.parse)(value);
-      }
 
-      url[part] = value;
-      break;
-
-    case 'port':
-      url[part] = value;
-
-      if (!required(value, url.protocol)) {
-        url.host = url.hostname;
-        url[part] = '';
-      } else if (value) {
-        url.host = url.hostname +':'+ value;
-      }
-
-      break;
-
-    case 'hostname':
-      url[part] = value;
-
-      if (url.port) value += ':'+ url.port;
-      url.host = value;
-      break;
-
-    case 'host':
-      url[part] = value;
-
-      if (/:\d+$/.test(value)) {
-        value = value.split(':');
-        url.port = value.pop();
-        url.hostname = value.join(':');
-      } else {
-        url.hostname = value;
-        url.port = '';
-      }
-
-      break;
-
-    case 'protocol':
-      url.protocol = value.toLowerCase();
-      url.slashes = !fn;
-      break;
-
-    case 'pathname':
-      url.pathname = value.length && value.charAt(0) !== '/' ? '/' + value : value;
-
-      break;
-
-    default:
-      url[part] = value;
-  }
-
-  for (var i = 0; i < rules.length; i++) {
-    var ins = rules[i];
-
-    if (ins[4]) url[ins[1]] = url[ins[1]].toLowerCase();
-  }
-
-  url.origin = url.protocol && url.host && url.protocol !== 'file:'
-    ? url.protocol +'//'+ url.host
-    : 'null';
-
-  url.href = url.toString();
-
-  return url;
-}
-
-/**
- * Transform the properties back in to a valid and full URL string.
- *
- * @param {Function} stringify Optional query stringify function.
- * @returns {String}
- * @api public
- */
-function toString(stringify) {
-  if (!stringify || 'function' !== typeof stringify) stringify = qs.stringify;
-
-  var query
-    , url = this
-    , protocol = url.protocol;
-
-  if (protocol && protocol.charAt(protocol.length - 1) !== ':') protocol += ':';
-
-  var result = protocol + (url.slashes ? '//' : '');
-
-  if (url.username) {
-    result += url.username;
-    if (url.password) result += ':'+ url.password;
-    result += '@';
-  }
-
-  result += url.host + url.pathname;
-
-  query = 'object' === typeof url.query ? stringify(url.query) : url.query;
-  if (query) result += '?' !== query.charAt(0) ? '?'+ query : query;
-
-  if (url.hash) result += url.hash;
-
-  return result;
-}
-
-URL.prototype = { set: set, toString: toString };
-
-//
-// Expose the URL parser and some additional properties that might be useful for
-// others or testing.
-//
-URL.extractProtocol = extractProtocol;
-URL.location = lolcation;
-URL.qs = qs;
-
-module.exports = URL;
-
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
+exports['default'] = connectToStores;
+module.exports = exports['default'];
 
 /***/ }),
 /* 54 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-var byteToHex = [];
-for (var i = 0; i < 256; ++i) {
-  byteToHex[i] = (i + 0x100).toString(16).substr(1);
+
+var content = __webpack_require__(55);
+
+if(typeof content === 'string') content = [[module.i, content, '']];
+
+var transform;
+var insertInto;
+
+
+
+var options = {"hmr":true}
+
+options.transform = transform
+options.insertInto = undefined;
+
+var update = __webpack_require__(4)(content, options);
+
+if(content.locals) module.exports = content.locals;
+
+if(false) {
+	module.hot.accept("!!../node_modules/css-loader/index.js!../node_modules/sass-loader/lib/loader.js!./style.scss", function() {
+		var newContent = require("!!../node_modules/css-loader/index.js!../node_modules/sass-loader/lib/loader.js!./style.scss");
+
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
+	module.hot.dispose(function() { update(); });
 }
-
-function bytesToUuid(buf, offset) {
-  var i = offset || 0;
-  var bth = byteToHex;
-  return bth[buf[i++]] + bth[buf[i++]] +
-          bth[buf[i++]] + bth[buf[i++]] + '-' +
-          bth[buf[i++]] + bth[buf[i++]] + '-' +
-          bth[buf[i++]] + bth[buf[i++]] + '-' +
-          bth[buf[i++]] + bth[buf[i++]] + '-' +
-          bth[buf[i++]] + bth[buf[i++]] +
-          bth[buf[i++]] + bth[buf[i++]] +
-          bth[buf[i++]] + bth[buf[i++]];
-}
-
-module.exports = bytesToUuid;
-
 
 /***/ }),
 /* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(global) {// Unique ID creation requires a high quality random # generator.  In the
-// browser this is a little complicated due to unknown quality of Math.random()
-// and inconsistent support for the `crypto` API.  We do the best we can via
-// feature-detection
-var rng;
+exports = module.exports = __webpack_require__(3)(false);
+// imports
 
-var crypto = global.crypto || global.msCrypto; // for IE 11
-if (crypto && crypto.getRandomValues) {
-  // WHATWG crypto RNG - http://wiki.whatwg.org/wiki/Crypto
-  var rnds8 = new Uint8Array(16); // eslint-disable-line no-undef
-  rng = function whatwgRNG() {
-    crypto.getRandomValues(rnds8);
-    return rnds8;
-  };
-}
 
-if (!rng) {
-  // Math.random()-based (RNG)
-  //
-  // If all else fails, use Math.random().  It's fast, but is of unspecified
-  // quality.
-  var rnds = new Array(16);
-  rng = function() {
-    for (var i = 0, r; i < 16; i++) {
-      if ((i & 0x03) === 0) r = Math.random() * 0x100000000;
-      rnds[i] = r >>> ((i & 0x03) << 3) & 0xff;
-    }
+// module
+exports.push([module.i, "* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n* {\n  box-sizing: border-box; }\n\nhtml, body {\n  margin: 0;\n  padding: 0; }\n\n.full-w {\n  width: 100%; }\n\n.hidden {\n  display: none; }\n\n.center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.flex {\n  display: flex; }\n  .flex.down {\n    flex-direction: column; }\n  .flex.right {\n    flex-direction: row; }\n\n.s1 {\n  float: left;\n  width: 8.33333%; }\n\n.s2 {\n  float: left;\n  width: 16.66667%; }\n\n.s3 {\n  float: left;\n  width: 25%; }\n\n.s4 {\n  float: left;\n  width: 33.33333%; }\n\n.s5 {\n  float: left;\n  width: 41.66667%; }\n\n.s6 {\n  float: left;\n  width: 50%; }\n\n.s7 {\n  float: left;\n  width: 58.33333%; }\n\n.s8 {\n  float: left;\n  width: 66.66667%; }\n\n.s9 {\n  float: left;\n  width: 75%; }\n\n.s10 {\n  float: left;\n  width: 83.33333%; }\n\n.s11 {\n  float: left;\n  width: 91.66667%; }\n\n.s12 {\n  float: left;\n  width: 100%; }\n\n.m1 {\n  float: left;\n  width: 8.33333%; }\n\n.m2 {\n  float: left;\n  width: 16.66667%; }\n\n.m3 {\n  float: left;\n  width: 25%; }\n\n.m4 {\n  float: left;\n  width: 33.33333%; }\n\n.m5 {\n  float: left;\n  width: 41.66667%; }\n\n.m6 {\n  float: left;\n  width: 50%; }\n\n.m7 {\n  float: left;\n  width: 58.33333%; }\n\n.m8 {\n  float: left;\n  width: 66.66667%; }\n\n.m9 {\n  float: left;\n  width: 75%; }\n\n.m10 {\n  float: left;\n  width: 83.33333%; }\n\n.m11 {\n  float: left;\n  width: 91.66667%; }\n\n.m12 {\n  float: left;\n  width: 100%; }\n\n.pad-0-0 {\n  padding: 0px 0px; }\n\n.pad-0-5 {\n  padding: 0px 5px; }\n\n.pad-0-10 {\n  padding: 0px 10px; }\n\n.pad-0-15 {\n  padding: 0px 15px; }\n\n.pad-0-20 {\n  padding: 0px 20px; }\n\n.pad-0-25 {\n  padding: 0px 25px; }\n\n.pad-0-30 {\n  padding: 0px 30px; }\n\n.pad-0-35 {\n  padding: 0px 35px; }\n\n.pad-0-40 {\n  padding: 0px 40px; }\n\n.pad-0-45 {\n  padding: 0px 45px; }\n\n.pad-0-50 {\n  padding: 0px 50px; }\n\n.pad-5-0 {\n  padding: 5px 0px; }\n\n.pad-5-5 {\n  padding: 5px 5px; }\n\n.pad-5-10 {\n  padding: 5px 10px; }\n\n.pad-5-15 {\n  padding: 5px 15px; }\n\n.pad-5-20 {\n  padding: 5px 20px; }\n\n.pad-5-25 {\n  padding: 5px 25px; }\n\n.pad-5-30 {\n  padding: 5px 30px; }\n\n.pad-5-35 {\n  padding: 5px 35px; }\n\n.pad-5-40 {\n  padding: 5px 40px; }\n\n.pad-5-45 {\n  padding: 5px 45px; }\n\n.pad-5-50 {\n  padding: 5px 50px; }\n\n.pad-10-0 {\n  padding: 10px 0px; }\n\n.pad-10-5 {\n  padding: 10px 5px; }\n\n.pad-10-10 {\n  padding: 10px 10px; }\n\n.pad-10-15 {\n  padding: 10px 15px; }\n\n.pad-10-20 {\n  padding: 10px 20px; }\n\n.pad-10-25 {\n  padding: 10px 25px; }\n\n.pad-10-30 {\n  padding: 10px 30px; }\n\n.pad-10-35 {\n  padding: 10px 35px; }\n\n.pad-10-40 {\n  padding: 10px 40px; }\n\n.pad-10-45 {\n  padding: 10px 45px; }\n\n.pad-10-50 {\n  padding: 10px 50px; }\n\n.pad-15-0 {\n  padding: 15px 0px; }\n\n.pad-15-5 {\n  padding: 15px 5px; }\n\n.pad-15-10 {\n  padding: 15px 10px; }\n\n.pad-15-15 {\n  padding: 15px 15px; }\n\n.pad-15-20 {\n  padding: 15px 20px; }\n\n.pad-15-25 {\n  padding: 15px 25px; }\n\n.pad-15-30 {\n  padding: 15px 30px; }\n\n.pad-15-35 {\n  padding: 15px 35px; }\n\n.pad-15-40 {\n  padding: 15px 40px; }\n\n.pad-15-45 {\n  padding: 15px 45px; }\n\n.pad-15-50 {\n  padding: 15px 50px; }\n\n.pad-20-0 {\n  padding: 20px 0px; }\n\n.pad-20-5 {\n  padding: 20px 5px; }\n\n.pad-20-10 {\n  padding: 20px 10px; }\n\n.pad-20-15 {\n  padding: 20px 15px; }\n\n.pad-20-20 {\n  padding: 20px 20px; }\n\n.pad-20-25 {\n  padding: 20px 25px; }\n\n.pad-20-30 {\n  padding: 20px 30px; }\n\n.pad-20-35 {\n  padding: 20px 35px; }\n\n.pad-20-40 {\n  padding: 20px 40px; }\n\n.pad-20-45 {\n  padding: 20px 45px; }\n\n.pad-20-50 {\n  padding: 20px 50px; }\n\n.pad-25-0 {\n  padding: 25px 0px; }\n\n.pad-25-5 {\n  padding: 25px 5px; }\n\n.pad-25-10 {\n  padding: 25px 10px; }\n\n.pad-25-15 {\n  padding: 25px 15px; }\n\n.pad-25-20 {\n  padding: 25px 20px; }\n\n.pad-25-25 {\n  padding: 25px 25px; }\n\n.pad-25-30 {\n  padding: 25px 30px; }\n\n.pad-25-35 {\n  padding: 25px 35px; }\n\n.pad-25-40 {\n  padding: 25px 40px; }\n\n.pad-25-45 {\n  padding: 25px 45px; }\n\n.pad-25-50 {\n  padding: 25px 50px; }\n\n.pad-30-0 {\n  padding: 30px 0px; }\n\n.pad-30-5 {\n  padding: 30px 5px; }\n\n.pad-30-10 {\n  padding: 30px 10px; }\n\n.pad-30-15 {\n  padding: 30px 15px; }\n\n.pad-30-20 {\n  padding: 30px 20px; }\n\n.pad-30-25 {\n  padding: 30px 25px; }\n\n.pad-30-30 {\n  padding: 30px 30px; }\n\n.pad-30-35 {\n  padding: 30px 35px; }\n\n.pad-30-40 {\n  padding: 30px 40px; }\n\n.pad-30-45 {\n  padding: 30px 45px; }\n\n.pad-30-50 {\n  padding: 30px 50px; }\n\n.pad-35-0 {\n  padding: 35px 0px; }\n\n.pad-35-5 {\n  padding: 35px 5px; }\n\n.pad-35-10 {\n  padding: 35px 10px; }\n\n.pad-35-15 {\n  padding: 35px 15px; }\n\n.pad-35-20 {\n  padding: 35px 20px; }\n\n.pad-35-25 {\n  padding: 35px 25px; }\n\n.pad-35-30 {\n  padding: 35px 30px; }\n\n.pad-35-35 {\n  padding: 35px 35px; }\n\n.pad-35-40 {\n  padding: 35px 40px; }\n\n.pad-35-45 {\n  padding: 35px 45px; }\n\n.pad-35-50 {\n  padding: 35px 50px; }\n\n.pad-40-0 {\n  padding: 40px 0px; }\n\n.pad-40-5 {\n  padding: 40px 5px; }\n\n.pad-40-10 {\n  padding: 40px 10px; }\n\n.pad-40-15 {\n  padding: 40px 15px; }\n\n.pad-40-20 {\n  padding: 40px 20px; }\n\n.pad-40-25 {\n  padding: 40px 25px; }\n\n.pad-40-30 {\n  padding: 40px 30px; }\n\n.pad-40-35 {\n  padding: 40px 35px; }\n\n.pad-40-40 {\n  padding: 40px 40px; }\n\n.pad-40-45 {\n  padding: 40px 45px; }\n\n.pad-40-50 {\n  padding: 40px 50px; }\n\n.pad-45-0 {\n  padding: 45px 0px; }\n\n.pad-45-5 {\n  padding: 45px 5px; }\n\n.pad-45-10 {\n  padding: 45px 10px; }\n\n.pad-45-15 {\n  padding: 45px 15px; }\n\n.pad-45-20 {\n  padding: 45px 20px; }\n\n.pad-45-25 {\n  padding: 45px 25px; }\n\n.pad-45-30 {\n  padding: 45px 30px; }\n\n.pad-45-35 {\n  padding: 45px 35px; }\n\n.pad-45-40 {\n  padding: 45px 40px; }\n\n.pad-45-45 {\n  padding: 45px 45px; }\n\n.pad-45-50 {\n  padding: 45px 50px; }\n\n.pad-50-0 {\n  padding: 50px 0px; }\n\n.pad-50-5 {\n  padding: 50px 5px; }\n\n.pad-50-10 {\n  padding: 50px 10px; }\n\n.pad-50-15 {\n  padding: 50px 15px; }\n\n.pad-50-20 {\n  padding: 50px 20px; }\n\n.pad-50-25 {\n  padding: 50px 25px; }\n\n.pad-50-30 {\n  padding: 50px 30px; }\n\n.pad-50-35 {\n  padding: 50px 35px; }\n\n.pad-50-40 {\n  padding: 50px 40px; }\n\n.pad-50-45 {\n  padding: 50px 45px; }\n\n.pad-50-50 {\n  padding: 50px 50px; }\n\n.mar-0-0 {\n  margin: 0px 0px; }\n\n.mar-0-5 {\n  margin: 0px 5px; }\n\n.mar-0-10 {\n  margin: 0px 10px; }\n\n.mar-0-15 {\n  margin: 0px 15px; }\n\n.mar-0-20 {\n  margin: 0px 20px; }\n\n.mar-0-25 {\n  margin: 0px 25px; }\n\n.mar-0-30 {\n  margin: 0px 30px; }\n\n.mar-0-35 {\n  margin: 0px 35px; }\n\n.mar-0-40 {\n  margin: 0px 40px; }\n\n.mar-0-45 {\n  margin: 0px 45px; }\n\n.mar-0-50 {\n  margin: 0px 50px; }\n\n.mar-5-0 {\n  margin: 5px 0px; }\n\n.mar-5-5 {\n  margin: 5px 5px; }\n\n.mar-5-10 {\n  margin: 5px 10px; }\n\n.mar-5-15 {\n  margin: 5px 15px; }\n\n.mar-5-20 {\n  margin: 5px 20px; }\n\n.mar-5-25 {\n  margin: 5px 25px; }\n\n.mar-5-30 {\n  margin: 5px 30px; }\n\n.mar-5-35 {\n  margin: 5px 35px; }\n\n.mar-5-40 {\n  margin: 5px 40px; }\n\n.mar-5-45 {\n  margin: 5px 45px; }\n\n.mar-5-50 {\n  margin: 5px 50px; }\n\n.mar-10-0 {\n  margin: 10px 0px; }\n\n.mar-10-5 {\n  margin: 10px 5px; }\n\n.mar-10-10 {\n  margin: 10px 10px; }\n\n.mar-10-15 {\n  margin: 10px 15px; }\n\n.mar-10-20 {\n  margin: 10px 20px; }\n\n.mar-10-25 {\n  margin: 10px 25px; }\n\n.mar-10-30 {\n  margin: 10px 30px; }\n\n.mar-10-35 {\n  margin: 10px 35px; }\n\n.mar-10-40 {\n  margin: 10px 40px; }\n\n.mar-10-45 {\n  margin: 10px 45px; }\n\n.mar-10-50 {\n  margin: 10px 50px; }\n\n.mar-15-0 {\n  margin: 15px 0px; }\n\n.mar-15-5 {\n  margin: 15px 5px; }\n\n.mar-15-10 {\n  margin: 15px 10px; }\n\n.mar-15-15 {\n  margin: 15px 15px; }\n\n.mar-15-20 {\n  margin: 15px 20px; }\n\n.mar-15-25 {\n  margin: 15px 25px; }\n\n.mar-15-30 {\n  margin: 15px 30px; }\n\n.mar-15-35 {\n  margin: 15px 35px; }\n\n.mar-15-40 {\n  margin: 15px 40px; }\n\n.mar-15-45 {\n  margin: 15px 45px; }\n\n.mar-15-50 {\n  margin: 15px 50px; }\n\n.mar-20-0 {\n  margin: 20px 0px; }\n\n.mar-20-5 {\n  margin: 20px 5px; }\n\n.mar-20-10 {\n  margin: 20px 10px; }\n\n.mar-20-15 {\n  margin: 20px 15px; }\n\n.mar-20-20 {\n  margin: 20px 20px; }\n\n.mar-20-25 {\n  margin: 20px 25px; }\n\n.mar-20-30 {\n  margin: 20px 30px; }\n\n.mar-20-35 {\n  margin: 20px 35px; }\n\n.mar-20-40 {\n  margin: 20px 40px; }\n\n.mar-20-45 {\n  margin: 20px 45px; }\n\n.mar-20-50 {\n  margin: 20px 50px; }\n\n.mar-25-0 {\n  margin: 25px 0px; }\n\n.mar-25-5 {\n  margin: 25px 5px; }\n\n.mar-25-10 {\n  margin: 25px 10px; }\n\n.mar-25-15 {\n  margin: 25px 15px; }\n\n.mar-25-20 {\n  margin: 25px 20px; }\n\n.mar-25-25 {\n  margin: 25px 25px; }\n\n.mar-25-30 {\n  margin: 25px 30px; }\n\n.mar-25-35 {\n  margin: 25px 35px; }\n\n.mar-25-40 {\n  margin: 25px 40px; }\n\n.mar-25-45 {\n  margin: 25px 45px; }\n\n.mar-25-50 {\n  margin: 25px 50px; }\n\n.mar-30-0 {\n  margin: 30px 0px; }\n\n.mar-30-5 {\n  margin: 30px 5px; }\n\n.mar-30-10 {\n  margin: 30px 10px; }\n\n.mar-30-15 {\n  margin: 30px 15px; }\n\n.mar-30-20 {\n  margin: 30px 20px; }\n\n.mar-30-25 {\n  margin: 30px 25px; }\n\n.mar-30-30 {\n  margin: 30px 30px; }\n\n.mar-30-35 {\n  margin: 30px 35px; }\n\n.mar-30-40 {\n  margin: 30px 40px; }\n\n.mar-30-45 {\n  margin: 30px 45px; }\n\n.mar-30-50 {\n  margin: 30px 50px; }\n\n.mar-35-0 {\n  margin: 35px 0px; }\n\n.mar-35-5 {\n  margin: 35px 5px; }\n\n.mar-35-10 {\n  margin: 35px 10px; }\n\n.mar-35-15 {\n  margin: 35px 15px; }\n\n.mar-35-20 {\n  margin: 35px 20px; }\n\n.mar-35-25 {\n  margin: 35px 25px; }\n\n.mar-35-30 {\n  margin: 35px 30px; }\n\n.mar-35-35 {\n  margin: 35px 35px; }\n\n.mar-35-40 {\n  margin: 35px 40px; }\n\n.mar-35-45 {\n  margin: 35px 45px; }\n\n.mar-35-50 {\n  margin: 35px 50px; }\n\n.mar-40-0 {\n  margin: 40px 0px; }\n\n.mar-40-5 {\n  margin: 40px 5px; }\n\n.mar-40-10 {\n  margin: 40px 10px; }\n\n.mar-40-15 {\n  margin: 40px 15px; }\n\n.mar-40-20 {\n  margin: 40px 20px; }\n\n.mar-40-25 {\n  margin: 40px 25px; }\n\n.mar-40-30 {\n  margin: 40px 30px; }\n\n.mar-40-35 {\n  margin: 40px 35px; }\n\n.mar-40-40 {\n  margin: 40px 40px; }\n\n.mar-40-45 {\n  margin: 40px 45px; }\n\n.mar-40-50 {\n  margin: 40px 50px; }\n\n.mar-45-0 {\n  margin: 45px 0px; }\n\n.mar-45-5 {\n  margin: 45px 5px; }\n\n.mar-45-10 {\n  margin: 45px 10px; }\n\n.mar-45-15 {\n  margin: 45px 15px; }\n\n.mar-45-20 {\n  margin: 45px 20px; }\n\n.mar-45-25 {\n  margin: 45px 25px; }\n\n.mar-45-30 {\n  margin: 45px 30px; }\n\n.mar-45-35 {\n  margin: 45px 35px; }\n\n.mar-45-40 {\n  margin: 45px 40px; }\n\n.mar-45-45 {\n  margin: 45px 45px; }\n\n.mar-45-50 {\n  margin: 45px 50px; }\n\n.mar-50-0 {\n  margin: 50px 0px; }\n\n.mar-50-5 {\n  margin: 50px 5px; }\n\n.mar-50-10 {\n  margin: 50px 10px; }\n\n.mar-50-15 {\n  margin: 50px 15px; }\n\n.mar-50-20 {\n  margin: 50px 20px; }\n\n.mar-50-25 {\n  margin: 50px 25px; }\n\n.mar-50-30 {\n  margin: 50px 30px; }\n\n.mar-50-35 {\n  margin: 50px 35px; }\n\n.mar-50-40 {\n  margin: 50px 40px; }\n\n.mar-50-45 {\n  margin: 50px 45px; }\n\n.mar-50-50 {\n  margin: 50px 50px; }\n\n@media only screen and (max-width: 600px) {\n  .s1 {\n    float: left;\n    width: 8.33333%; }\n  .s2 {\n    float: left;\n    width: 16.66667%; }\n  .s3 {\n    float: left;\n    width: 25%; }\n  .s4 {\n    float: left;\n    width: 33.33333%; }\n  .s5 {\n    float: left;\n    width: 41.66667%; }\n  .s6 {\n    float: left;\n    width: 50%; }\n  .s7 {\n    float: left;\n    width: 58.33333%; }\n  .s8 {\n    float: left;\n    width: 66.66667%; }\n  .s9 {\n    float: left;\n    width: 75%; }\n  .s10 {\n    float: left;\n    width: 83.33333%; }\n  .s11 {\n    float: left;\n    width: 91.66667%; }\n  .s12 {\n    float: left;\n    width: 100%; } }\n\n.-i-s-fixed {\n  transform: none !important;\n  flex-shrink: 0; }\n\n.-i-s-scroll {\n  overflow-x: scroll;\n  overflow-y: hidden; }\n\n.-i-s-scroll.-i-s-vertical {\n  overflow-y: scroll;\n  overflow-x: hidden; }\n\n.-i-s-center {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-s-static {\n  box-sizing: border-box;\n  position: relative;\n  flex-direction: row;\n  display: flex;\n  overflow: hidden; }\n  .-i-s-static.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-outer {\n  position: relative;\n  overflow: hidden; }\n  .-i-s-outer ::-webkit-scrollbar {\n    display: none; }\n\n.-i-s-inner {\n  min-height: 100%;\n  display: flex; }\n  .-i-s-inner > .-i-s-in {\n    transition: transform 0.3s cubic-bezier(0, 0.93, 0.27, 1);\n    transform: scale(1) rotateY(0deg) !important; }\n  .-i-s-inner > .-i-s-in_pre.-i-s-right {\n    transform-origin: 0% 50%;\n    transform: scale(1) rotateY(10deg); }\n  .-i-s-inner > .-i-s-in_pre.-i-s-left {\n    transform-origin: 100% 50%;\n    transform: scale(1) rotateY(-10deg); }\n  .-i-s-inner.-i-s-reverse {\n    flex-direction: row-reverse; }\n\n.-i-s-inner > .-i-s-outer {\n  flex-shrink: 0; }\n\n.-i-s-inner > .-i-s-static {\n  flex-shrink: 0; }\n\n.-i-s-horizontal {\n  flex-direction: row; }\n\n.-i-s-vertical {\n  flex-direction: column; }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-right {\n    transform-origin: 50% 0%;\n    transform: scale(1) rotateX(-60deg); }\n  .-i-s-vertical > .-i-s-in_pre.-i-s-left {\n    transform-origin: 50% 100%;\n    transform: scale(1) rotateX(60deg); }\n  .-i-s-vertical.-i-s-reverse {\n    flex-direction: column-reverse; }\n\n.-i-viewer {\n  background: black;\n  position: absolute;\n  width: 100vw;\n  height: calc(100vh - 50px);\n  top: 50px;\n  left: 0;\n  overflow: hidden;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n\n.-i-viewer-image {\n  border-radius: 10px;\n  position: absolute;\n  left: 0;\n  top: 0;\n  transition: opacity 0.3s ease;\n  opacity: 1; }\n  .-i-viewer-image:hidden {\n    opacity: 0; }\n\n.-i-loader {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin: auto;\n  width: 10px;\n  height: 10px;\n  background-color: #FFFFFF;\n  animation: rotate 1s infinite ease-in-out;\n  transition: opacity 1s ease; }\n\n.-i-loader-stop {\n  animation-iteration-count: 0;\n  opacity: 0.2;\n  transform: scale(0.5); }\n\n@keyframes rotate {\n  0% {\n    transform: perspective(20px) rotateX(0deg) rotateY(0deg); }\n  50% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(0deg); }\n  100% {\n    transform: perspective(20px) rotateX(-180deg) rotateY(-180deg); } }\n\n.home-more-btn {\n  justify-content: flex-start;\n  padding-left: 20px; }\n\n.home-title {\n  font-family: Merienda;\n  font-size: 80px;\n  color: white; }\n\n.gain {\n  color: #1294bf; }\n\n.loss {\n  color: #FF5027; }\n\n.blue {\n  color: #1294bf;\n  background: #171a1c; }\n\n.blue-inv {\n  color: #171a1c;\n  background: #1294bf; }\n\n.opaque {\n  opacity: 0 !important; }\n\n.app-title {\n  font-family: Merienda;\n  font-size: 50px;\n  text-align: center;\n  color: #95B4C0; }\n\n.-i-overlay {\n  background: rgba(64, 94, 109, 0.86); }\n\n.noselect {\n  -webkit-touch-callout: none;\n  /* iOS Safari */\n  -webkit-user-select: none;\n  /* Safari */\n  -khtml-user-select: none;\n  /* Konqueror HTML */\n  -moz-user-select: none;\n  /* Firefox */\n  -ms-user-select: none;\n  /* Internet Explorer/Edge */\n  user-select: none;\n  /* Non-prefixed version, currently\n                                  supported by Chrome and Opera */ }\n\n.select {\n  -webkit-touch-callout: initial;\n  /* iOS Safari */\n  -webkit-user-select: initial;\n  /* Safari */\n  -khtml-user-select: initial;\n  /* Konqueror HTML */\n  -moz-user-select: initial;\n  /* Firefox */\n  -ms-user-select: initial;\n  /* Internet Explorer/Edge */\n  user-select: initial;\n  /* Non-prefixed version, currently\n                                  supported by Chrome and Opera */ }\n\n* {\n  -webkit-touch-callout: none;\n  /* iOS Safari */\n  -webkit-user-select: none;\n  /* Safari */\n  -khtml-user-select: none;\n  /* Konqueror HTML */\n  -moz-user-select: none;\n  /* Firefox */\n  -ms-user-select: none;\n  /* Internet Explorer/Edge */\n  user-select: none;\n  /* Non-prefixed version, currently */ }\n\nhtml {\n  background: #21282c; }\n\nbody {\n  background: #21282c;\n  color: #95B4C0;\n  text-rendering: geometricPrecision;\n  font-size: 14px;\n  overflow: hidden;\n  transition: color 0.3s ease; }\n\n.hidden2 {\n  visibility: hidden; }\n\n.b0 {\n  background: #171a1c;\n  color: #95B4C0; }\n\n.b1 {\n  background: #21282c;\n  color: #95B4C0; }\n\n.b1a {\n  background: #243035;\n  color: #95B4C0; }\n\n.b2 {\n  background: #365463;\n  color: white; }\n\n.b3 {\n  background: #95B4C0;\n  color: #171a1c; }\n\n.bg-highlight {\n  background: cyan;\n  color: #171a1c; }\n\n.bg-dark {\n  background: #171a1c;\n  color: #95B4C0; }\n\n.bg-light {\n  background: #95B4C0;\n  color: #171a1c; }\n\ndiv.btn {\n  flex-shrink: 0;\n  height: 50px;\n  cursor: pointer;\n  text-transform: uppercase;\n  text-rendering: geometricPrecision;\n  font-size: 12px; }\n\n.btn-sidebar {\n  height: 50px;\n  background: #95B4C0;\n  color: #171a1c; }\n\n.active {\n  background: #365463;\n  color: #95B4C0; }\n\n.slideshow {\n  height: 100%;\n  width: 100%; }\n  .slideshow img {\n    width: auto;\n    height: auto; }\n\n.pin-btn {\n  transition: background 0.3s ease;\n  width: 50px;\n  flex-shrink: 0;\n  transition: opacity 0.3s ease; }\n  .pin-btn:hover {\n    background: rgba(0, 0, 0, 0.1); }\n  .pin-btn.hidden-pin-btn {\n    opacity: 0; }\n  .pin-btn.active-pin {\n    background: rgba(0, 0, 0, 0.1); }\n\n.modal-label {\n  position: absolute;\n  left: 0px;\n  top: 0px;\n  height: 50px;\n  padding-left: 25px;\n  line-height: 50px;\n  font-family: 'Roboto Slab', serif;\n  opacity: 0.75; }\n\n.modal-label-pre {\n  color: grey; }\n\n.btn-add {\n  background: rgba(0, 0, 0, 0.1); }\n\n.stat-label {\n  padding: 0px 5px;\n  opacity: 0.5; }\n\n.stat-val {\n  padding: 0px 5px; }\n\n.view-sub {\n  background: #171a1c; }\n\n.view-bar {\n  background: #365463; }\n\n.view-error {\n  width: 100%;\n  height: 100%;\n  background: #de3232;\n  color: white;\n  font-weight: 700;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n  .view-error .error-code {\n    opacity: 0.5;\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    padding: 10px; }\n\n.error-bg {\n  background: #de3232;\n  color: white; }\n\n.error {\n  color: #de3232; }\n\n.show-listitem-pins {\n  position: absolute;\n  right: 0px; }\n\n.pin-link {\n  background: white; }\n\n.pin-title {\n  background: rgba(0, 0, 0, 0.06);\n  height: auto;\n  position: absolute;\n  color: white;\n  font-family: 'Roboto Slab', serif;\n  bottom: 10%;\n  padding: 5px 10px;\n  width: 100%;\n  left: 0px; }\n\n.pin-wrap {\n  width: 100%;\n  height: 100%;\n  position: relative; }\n\n.pin {\n  cursor: pointer;\n  overflow: hidden;\n  position: relative;\n  height: calc( 100% - 10px);\n  border-radius: 5px;\n  width: calc( 100% - 10px); }\n  .pin .pin_icon {\n    opacity: 0;\n    transition: opacity 0.3s ease; }\n  .pin:hover .pin_icon {\n    opacity: 0.3; }\n\n.modal-link {\n  min-width: 400px;\n  height: auto; }\n\n.invite-link {\n  line-height: 50px;\n  color: #1294bf;\n  font-family: 'Roboto Slab', serif;\n  text-align: center; }\n  .invite-link span {\n    text-align: center;\n    width: 100%; }\n\n.pins {\n  background: #171a1c; }\n  .pins .pins-options {\n    display: flex;\n    height: 50px; }\n  .pins .grid-inner {\n    width: calc(100% - 20px);\n    margin: 0px 10px;\n    margin-top: 10px; }\n\n.pin-img {\n  transform: none !important;\n  background-size: cover;\n  background-position: center; }\n\n.pin-textsms {\n  background: #131313;\n  color: #e0e0e0;\n  font-size: 16px;\n  font-family: 'Roboto Slab', serif;\n  padding: 30px; }\n\n.list {\n  overflow-y: scroll;\n  overflow-x: hidden;\n  -webkit-overflow-scrolling: touch;\n  display: block; }\n\n.list-alt {\n  background: rgba(0, 0, 0, 0.06); }\n\n.list-content {\n  display: block;\n  color: #95B4C0;\n  font-size: 15px; }\n\n.sub {\n  font-size: 12px;\n  opacity: 0.8; }\n\nspan {\n  opacity: 0.999; }\n\n.expand-btn i {\n  transition: transform 0.3s ease; }\n\n.btn-rotate i {\n  transition: transform 0.4s cubic-bezier(0.25, 0.34, 0, 1); }\n\n.btn-rotate-90 i {\n  transform: rotate(-90deg); }\n\n.expand-btn.expanded i {\n  transform: rotate(45deg); }\n\n.todo-date {\n  transition: color 0.3s ease;\n  line-height: 50px;\n  padding-left: 10px;\n  font-size: 13px;\n  text-transform: uppercase;\n  font-weight: 500; }\n  .todo-date span {\n    opacity: 0.8; }\n  .todo-date.done {\n    color: #fb6868; }\n\n.check-btn.check-btn-done {\n  color: #fb6868; }\n\n.check-btn {\n  color: #171a1c; }\n  .check-btn i {\n    transition: color 0.3s ease; }\n  .check-btn:hover i {\n    color: #95B4C0 !important; }\n\n.todo.done {\n  color: #fb6868; }\n  .todo.done i {\n    color: #fb6868; }\n\n.todo.undone:hover i {\n  color: #95B4C0; }\n\n.todo-sub-item {\n  padding-left: 50px; }\n\n.pin_icon {\n  position: absolute;\n  top: 0px;\n  right: 0px;\n  background: white;\n  border-radius: 0px 5px;\n  padding: 6px;\n  font-size: 19px;\n  opacity: 0.3;\n  color: black; }\n\n.todo-wrap {\n  transition: color 0.3s ease;\n  cursor: pointer; }\n  .todo-wrap .name {\n    font-family: 'Roboto Slab', serif;\n    font-size: 20px;\n    padding-left: 15px;\n    line-height: 100px; }\n  .todo-wrap .created_at {\n    font-family: Arial;\n    transition: opacity 0.2s ease;\n    position: absolute;\n    right: 0px;\n    top: 0px;\n    opacity: 0.2;\n    color: whitesmoke;\n    height: 50px;\n    line-height: 50px;\n    padding-right: 5px; }\n  .todo-wrap.done i {\n    color: #fb6868; }\n  .todo-wrap .completed {\n    color: #fb6868; }\n  .todo-wrap.done {\n    color: #fb6868; }\n\n.main-menu {\n  z-index: 3; }\n\n.photo_count {\n  position: absolute;\n  bottom: 5px;\n  right: 5px;\n  line-height: 14px;\n  font-size: 14px;\n  opacity: 0.99; }\n\n.list-item {\n  background: #243035; }\n  .list-item:hover {\n    background: #171a1c;\n    transition: background 0.3s ease;\n    cursor: pointer; }\n\n.list-count {\n  opacity: 0.99;\n  font-family: 'Roboto Slab', serif;\n  color: grey;\n  font-size: 24px;\n  padding: 0px 10px;\n  width: auto; }\n  .list-count div {\n    transform: none !important; }\n\n.list-name {\n  font-size: 20px;\n  font-family: 'Roboto Slab', serif;\n  color: #95B4C0; }\n\n.room-members {\n  padding: 20px 100px;\n  flex-wrap: wrap; }\n\n.profile-self-label {\n  position: absolute;\n  height: 10px;\n  width: 10px;\n  background: #05bdff;\n  bottom: 6%;\n  right: 8%;\n  border-radius: 5px; }\n\n.profile-mini-selected {\n  background: rgba(0, 0, 0, 0.6);\n  align-items: center;\n  border-radius: 50%;\n  display: flex;\n  /* border: 12px solid black; */\n  height: 105%;\n  width: 105%;\n  margin-top: -2.5%;\n  margin-left: -2.5%;\n  align-content: center;\n  justify-content: center; }\n\n.search-results {\n  margin-top: 10px;\n  display: flex;\n  justify-content: center; }\n  .search-results .profile-mini {\n    margin: 10px; }\n\n.profile-mini {\n  position: relative;\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-end;\n  width: 100%;\n  overflow: hidden;\n  height: 100%;\n  max-width: 200px;\n  max-height: 200px;\n  background: #243035;\n  padding: 5px;\n  cursor: pointer;\n  transition: background 0.3s ease; }\n  .profile-mini:hover {\n    background: #171a1c; }\n  .profile-mini .profile-name {\n    font-family: 'Roboto Slab', serif;\n    color: #95B4C0;\n    line-height: 30px;\n    font-size: 16px;\n    text-align: center;\n    height: 30px; }\n  .profile-mini .avatar {\n    background: #2b383e;\n    position: relative;\n    cursor: pointer;\n    background-position: center;\n    background-size: cover;\n    height: 60%;\n    width: 60%;\n    border-radius: 50%; }\n  .profile-mini .name {\n    animation: color 0.3s ease;\n    font-family: Merienda; }\n\n.button-person-add {\n  color: #5c6467; }\n\n.login-form {\n  display: flex;\n  flex-direction: column;\n  justify-content: flex-end;\n  width: 100%;\n  height: 100%;\n  margin: 0; }\n\n.title {\n  width: 100%;\n  text-align: center;\n  line-height: 30px;\n  font-weight: 600;\n  text-transform: uppercase;\n  opacity: 0.5; }\n\n.modal {\n  padding: 20px; }\n\n.lists-grid {\n  overflow: visible;\n  height: auto; }\n\n.lists-inner {\n  overflow: scroll; }\n\n.lists-options {\n  background: #171a1c; }\n\n.form {\n  min-width: 400px;\n  min-height: 200px; }\n  .form.pin-form {\n    min-height: 300px; }\n  .form input {\n    font-size: 16px !important; }\n  .form .input-amount-submit {\n    left: 0px;\n    opacity: 0.99;\n    text-transform: uppercase;\n    margin-top: 50px;\n    width: 50% !important;\n    left: 25%; }\n  .form .input-amount-submit-s {\n    color: #95B4C0;\n    background: rgba(0, 0, 0, 0.1); }\n  .form .input-amount-submit-p {\n    color: #171a1c;\n    background: #95B4C0; }\n  .form .input-amount-submit-false {\n    color: #365463; }\n\n.list-title {\n  opacity: 0.99;\n  font-family: 'Roboto Slab', serif;\n  font-size: 16px;\n  font-weight: 500;\n  line-height: 54px;\n  padding: 0px 10px; }\n\n.viewer {\n  background: black;\n  position: absolute;\n  width: 100vw;\n  height: calc(100vh - 50px);\n  top: 50px;\n  left: 0;\n  overflow: hidden; }\n\n.viewer-image {\n  border-radius: 10px;\n  position: absolute;\n  left: 0;\n  top: 0; }\n\n.add-btn {\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center;\n  height: 100%;\n  width: 100%;\n  margin: 0 auto;\n  cursor: pointer;\n  background: rgba(0, 0, 0, 0.06);\n  transition: background 0.3s ease; }\n  .add-btn:hover {\n    background: #171a1c; }\n\n.add-friend-view {\n  width: 80%;\n  min-width: 450px;\n  max-height: 500px; }\n\n.btn-opaque {\n  opacity: 0.4;\n  transition: opacity 0.3s ease; }\n  .btn-opaque:hover {\n    opacity: 0.6; }\n\n.user-overlay-delete {\n  cursor: pointer;\n  height: 100%;\n  width: 100%;\n  position: absolute;\n  left: 0;\n  top: 0;\n  background: rgba(23, 26, 28, 0.83);\n  opacity: 1;\n  transition: opacity 0.3s ease;\n  z-index: 10;\n  align-items: center;\n  display: flex;\n  align-content: center;\n  justify-content: center; }\n  .user-overlay-delete i {\n    color: red; }\n  .user-overlay-delete.hidden {\n    opacity: 0; }\n  .user-overlay-delete:hover {\n    opacity: 1; }\n", ""]);
 
-    return rnds;
-  };
-}
+// exports
 
-module.exports = rng;
-
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ })
 /******/ ]);

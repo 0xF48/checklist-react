@@ -322,7 +322,7 @@ class Slide extends Component
 						@_outer = e
 					className: outer_class
 					onKeyDown: @onKeyDown
-					style:@getOuterHW()
+					style:Object.assign {},@props.style,@getOuterHW()
 				,@pass_props
 				[
 					h 'div',
@@ -337,7 +337,7 @@ class Slide extends Component
 					ref: (e)=>
 						@_outer = e
 					onKeyDown: @onKeyDown,
-					style:@getOuterHW()
+					style:Object.assign {},@props.style,@getOuterHW()
 					className: outer_class
 				,@pass_props
 				@props.children

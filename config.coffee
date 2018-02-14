@@ -5,7 +5,7 @@ module.exports =
 	origin: "http://localhost:8787"
 	port: 8787
 	mode: 'dev'
-	database: 'mongodb://localhost:7227/checki'
+	database: 'mongodb://localhost:27017/checki'
 	auth: 
 		twitter:
 			key: "DxreKjPMqlegl7I3DwPy9M96x"

@@ -212,7 +212,7 @@ class Check extends Component
 					hover: no
 				if @props.onMouseLeave then @props.onMouseLeave(e)
 			className: cn 'btn', 'check-btn', @props.done && 'check-btn-done'
-			width: g.dim
+			width: g.dim*2
 			vertical: no
 			onClick: (e)=>
 				
@@ -311,7 +311,7 @@ class Todo extends Component
 
 		# SHOW PINS BUTTON
 		show_pins_button = h Button,
-			width: g.dim
+			width: g.dim*2
 			className: cn 'pin-btn',active && 'active-pin',hide_pin && 'hidden-pin-btn'
 			onMouseEnter: (e)=>
 				@setState
@@ -336,7 +336,7 @@ class Todo extends Component
 		# store_state = store.getState()
 		options_left = [
 				!@props.sub && h Slide,
-					width: g.dim
+					width: g.dim*2
 					className: 'pin-btn center btn b1'
 					onMouseEnter: ()=> 
 						@setState
@@ -351,7 +351,7 @@ class Todo extends Component
 					h 'i',{className:'material-icons'},'add'
 			,
 				h Slide,
-					width: g.dim
+					width: g.dim*2
 					className: 'pin-btn center btn b1'
 					onMouseEnter: ()=> 
 						@setState
@@ -367,7 +367,7 @@ class Todo extends Component
 		]			
 
 		options = h Slide,
-				width: g.dim
+				width: g.dim*2
 				className: 'pin-btn center btn b1'
 				onMouseEnter: ()=>
 					@setState
@@ -386,6 +386,7 @@ class Todo extends Component
 			check_btn = h Check,
 				_intui_slide: yes
 				done: !!@props.completed_at
+				width: g.dim
 				onMouseEnter: (e)=>
 					@setState
 						hover_opt_left: yes
@@ -448,7 +449,7 @@ class Todo extends Component
 			className: cn 'todo',props.completed_at && 'done' || 'undone' 
 			vertical: no
 			slide: no
-			height: g.dim
+			height: g.dim*2
 			check_btn			
 			h Slide,
 				key: 'todo-main'
@@ -836,11 +837,10 @@ class ListItemView extends Component
 		]
 
 		h Slide,
-			className: 'list pad-25-25'
+			className: 'list'
 			vertical: yes 
 			h Slide,
 				# center: yes
-				className: 'participants'
 				height: g.dim
 				# vertical: no
 				options
@@ -932,9 +932,7 @@ class PinsView extends Component
 		@state = 
 			filter: null
 
-	# componentWillRecieveProps: (props)->
-	# 	# log props.vuew.show_todo && props.view.show_todo._id,@props.view.show_todo && @props.view.show_todo._id
-
+	
 	componentWillUpdate: (props,state)->
 		if state.filter != @state.filter
 			state.reset_grid = true	
@@ -1045,7 +1043,7 @@ class UserLoginView extends Component
 						email: e.target.value
 				type: 'text'
 				name: 'email'
-				label: 'email'
+				label: 'username'
 				value: @state.email
 			h InputText,
 				height: g.dim
@@ -1653,6 +1651,9 @@ class AddFriendView extends Component
 	render: (props,state)=>
 		results = props.view.search_users.map (u)->
 			u.key = u._id
+			u.onClick = ((u)->
+				actions.addFriend(u)
+			).bind(@,u)
 			h User,u
 
 
@@ -1738,10 +1739,10 @@ class UserView extends Component
 		
 
 
-		friend_items = props.user.friends.map (g,i)->
+		friend_items = props.user.friends.map (u,i)->
 			h GridItem,
-				i:i,w: 2,h: 1,key: g._id,
-					h Item,g
+				i:i,w: 1,h: 1,key: u._id,
+					h User,u
 
 		friend_items.push h GridItem,
 			i: friend_items.length
@@ -1853,6 +1854,9 @@ class UserSettings extends Component
 				value: null
 			h Slide,
 				height: g.dim*3
+				width: g.dim*3
+				style:
+					'align-self':'center'
 				center: yes
 				vertical: yes
 				user

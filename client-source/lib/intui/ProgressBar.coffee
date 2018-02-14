@@ -5,7 +5,7 @@ require './style/ProgressBar.scss';
 el = h
 cn = require 'classnames'
 
-class ProgressBar extends Component
+class ProgressBar
 	render: ->
 		el 'div',
 			className: cn '-i-progress-bar',@props.className

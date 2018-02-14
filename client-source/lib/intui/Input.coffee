@@ -2,7 +2,7 @@ require './style/Input.scss';
 {h,Component} = require 'preact'
 cn = require 'classnames'
 
-class Input extends Component
+class Input
 	render: ->
 		if @props.label
 			label = h 'span',className:'label',@props.label

@@ -6,6 +6,7 @@ cn = require 'classnames'
 
 class InputFile extends Component
 	constructor: (props)->
+		super()
 		@state = 
 			focus: no
 			initial_value: props.value

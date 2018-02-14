@@ -65,6 +65,7 @@ module.exports = (User)->
 		User.findOne
 			_id : id
 		.populate 'groups'
+		.populate 'friends'
 		.then (user)->
 			done(null,user)
 		.catch done
