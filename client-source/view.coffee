@@ -1096,7 +1096,7 @@ class UserSignupView extends Component
 				type: 'text'
 				name: 'email'
 				disabled: @props.disabled
-				label: 'email'
+				label: 'username'
 				value: @state.email
 			
 			h InputText,
