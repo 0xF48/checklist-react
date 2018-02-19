@@ -1,4 +1,4 @@
-#checki#
+# checki
 just a prototype/test, not very stable.
 `npm i && npm start`
 <p align="center"><img src="/screens/1.png" /></p>
