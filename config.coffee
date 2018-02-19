@@ -8,5 +8,5 @@ module.exports =
 	database: 'mongodb://localhost:27017/checki'
 	auth: 
 		twitter:
-			key: "DxreKjPMqlegl7I3DwPy9M96x"
-			secret: "0aYjKUSGdcpIjHmCNaEixKjo6mxD7F2Wf5BfwpniEVL359qmec"
+			key: ""
+			secret: ""

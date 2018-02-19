@@ -1,11 +1,11 @@
 passport = require('passport')
-passport_twitter = require('passport-twitter')
+# passport_twitter = require('passport-twitter')
 LocalStrategy = require('passport-local').Strategy
-twitter_secret = CFG.auth.twitter.secret
-twitter_key = CFG.auth.twitter.key
-twitter_cb_url = CFG.origin+":"+CFG.port+"/auth/twitter/callback"
+# twitter_secret = CFG.auth.twitter.secret
+# twitter_key = CFG.auth.twitter.key
+# twitter_cb_url = CFG.origin+":"+CFG.port+"/auth/twitter/callback"
 
-de '[twitter_cb_url]', twitter_cb_url
+# de '[twitter_cb_url]', twitter_cb_url
 
 cred_err_msg = 'bad username/password'
 
@@ -36,24 +36,24 @@ module.exports = (User)->
 
 
 
-	TwitterStrategy = new passport_twitter
-		consumerKey: twitter_key
-		consumerSecret: twitter_secret
-		callbackURL: twitter_cb_url
-	,(token, tokenSecret, tw_profile, cb)->
-		User.findOneOrCreate 
-			auth: 
-				twitter:
-					id: tw_profile.id
-		.then (profile)->
-			cb(null,profile)
-		.catch (err)->
-			cb(err)
+	# TwitterStrategy = new passport_twitter
+	# 	consumerKey: twitter_key
+	# 	consumerSecret: twitter_secret
+	# 	callbackURL: twitter_cb_url
+	# ,(token, tokenSecret, tw_profile, cb)->
+	# 	User.findOneOrCreate 
+	# 		auth: 
+	# 			twitter:
+	# 				id: tw_profile.id
+	# 	.then (profile)->
+	# 		cb(null,profile)
+	# 	.catch (err)->
+	# 		cb(err)
 
 
 
 
-	passport.use(TwitterStrategy)
+	# passport.use(TwitterStrategy)
 	passport.use(local_strat)
 
 
